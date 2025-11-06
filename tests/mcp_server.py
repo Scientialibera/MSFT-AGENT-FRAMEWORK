@@ -16,6 +16,7 @@ The agent's tools will be available as MCP tools to any MCP-compatible client.
 """
 
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Annotated
@@ -23,12 +24,15 @@ from typing import Annotated
 import structlog
 from fastmcp import FastMCP
 from pydantic import Field
+from dotenv import load_dotenv
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.orchestrator.main import AIAssistant
-from config.src.settings import AzureOpenAISettings, ENABLE_MCP_SERVER
+
+# Load environment variables
+load_dotenv()
 
 # ============================================================================
 # LOGGING CONFIGURATION
@@ -74,12 +78,8 @@ def _initialize_assistant() -> AIAssistant:
         AIAssistant: The initialized assistant with all tools loaded.
     """
     try:
-        settings = AzureOpenAISettings.from_env()
-        logger.info("Configuration loaded successfully")
-        
-        assistant = AIAssistant(aoai_settings=settings)
+        assistant = AIAssistant()
         logger.info("AI Assistant initialized")
-        
         return assistant
     except Exception as e:
         logger.error(f"Failed to initialize assistant: {e}", exc_info=True)
@@ -89,10 +89,11 @@ def _initialize_assistant() -> AIAssistant:
 async def main():
     """Run the FastMCP server."""
     
-    # Check if MCP is enabled
-    if not ENABLE_MCP_SERVER:
+    # Check if MCP is enabled via environment
+    enable_mcp = os.getenv("ENABLE_MCP_SERVER", "False").lower() == "true"
+    if not enable_mcp:
         logger.error("MCP Server is disabled.")
-        logger.error("To enable, set ENABLE_MCP_SERVER=True in .env or config/settings.py")
+        logger.error("To enable, set ENABLE_MCP_SERVER=True in .env")
         return
     
     logger.info("Starting FastMCP server...")

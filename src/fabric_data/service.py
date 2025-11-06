@@ -9,17 +9,22 @@ Handles all interactions with the Fabric Data Agent, including:
 """
 
 import os
-import json
 from typing import Dict, Any, Optional
+
 import structlog
+
 from .client import FabricDataAgentClient
 
 logger = structlog.get_logger(__name__)
 
 
 class FabricDataService:
-    """Service for interacting with Fabric Data Agent."""
-    
+    """
+    Service for interacting with Fabric Data Agent.
+
+    Manages authentication and provides interface to published agents.
+    """
+
     def __init__(self, tenant_id: str, data_agent_url: str):
         """
         Initialize the Fabric Data Service.
@@ -47,7 +52,7 @@ class FabricDataService:
                     tenant_id=self.tenant_id,
                     data_agent_url=self.data_agent_url
                 )
-                logger.info(" Fabric Data Agent client initialized")
+                logger.info("Fabric Data Agent client initialized")
             except Exception as e:
                 logger.error("Failed to initialize client", error=str(e))
                 raise
@@ -73,21 +78,21 @@ class FabricDataService:
             self._ensure_client()
             
             logger.info(
-                " Querying Fabric Data Agent",
+                "Querying Fabric Data Agent",
                 question=question
             )
             
             # Get the response
             response = self.client.ask(question)
             
-            logger.info(" Query completed", question=question)
+            logger.info("Query completed", question=question)
             
             # Return as string (Agent Framework expects string return)
             return str(response)
             
         except Exception as e:
             logger.error(
-                " Query failed",
+                "Query failed",
                 error=str(e),
                 question=question if 'question' in locals() else "unknown"
             )

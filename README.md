@@ -51,7 +51,7 @@ This pattern applies to any LLM-based agent: the LLM makes tool decisions automa
 
 # Adding Tools - Dynamic Discovery Pattern
 
-This system uses **automatic tool discovery** based on a strict naming convention. Add a new tool by simply creating 2 files and 1 factory function - no code changes needed!
+This system uses **automatic tool discovery** based on a strict naming convention. Add a new tool by simply creating 2 files and 1 factory function, then add environment variables - no code changes needed!
 
 ## The Naming Convention
 
@@ -150,6 +150,23 @@ def get_sql_database_service() -> SqlDatabaseService:
     return _service
 ```
 
+## Step 3: Add Environment Variables
+
+**File: `.env`**
+
+```bash
+# Existing settings
+AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-4o
+TENANT_ID=your-tenant-id
+DATA_AGENT_URL=https://api.fabric.microsoft.com/v1/workspaces/xxx/...
+
+# NEW - Add variables required by your service
+SQL_DATABASE_CONNECTION_STRING=Server=your-server.database.windows.net;Database=your_db;Authentication=Active Directory Default;
+```
+
+The factory function reads these via `os.getenv()` and passes them to your service.
+
 ## That's It!
 
 Tool loader automatically:
@@ -228,10 +245,11 @@ No routing. No orchestration. Just services + tools.
 
 ## Example: SQL Database Tool
 
-To add SQL database querying capability, follow the 2-step pattern above:
+To add SQL database querying capability, follow the 3-step pattern above:
 
-1. Create `config/tools/sql_database.json`
-2. Create `src/sql_database/service.py` with `get_sql_database_service()` factory
+1. Create `config/tools/sql_database.json` - Define the tool interface
+2. Create `src/sql_database/service.py` with `get_sql_database_service()` factory - Implement the service
+3. Add `SQL_DATABASE_CONNECTION_STRING=...` to `.env` - Provide runtime configuration
 
 **That's it!** The loader automatically discovers and registers the tool.
 
@@ -396,12 +414,12 @@ The agent is now available as a tool to any MCP-compatible client.
 ```python
 import asyncio
 from src.orchestrator.main import AIAssistant
-from config.src.settings import AzureOpenAISettings
+from dotenv import load_dotenv
 
+load_dotenv()
 
 async def test():
-    settings = AzureOpenAISettings.from_env()
-    assistant = AIAssistant(aoai_settings=settings)
+    assistant = AIAssistant()
     
     result = await assistant.process_question(
         "Show top 5 orders"

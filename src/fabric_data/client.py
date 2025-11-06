@@ -13,7 +13,6 @@ Differences from original:
 Requirements:
 - azure-identity
 - openai
-- python-dotenv (optional, for environment variables)
 
 Usage:
 1. Ensure you're logged in with Azure CLI: `az login`
@@ -23,10 +22,8 @@ Usage:
 
 import time
 import uuid
-import json
-import os, requests
+import requests
 import warnings
-from typing import Optional
 from azure.identity import DefaultAzureCredential
 from openai import OpenAI
 
@@ -36,13 +33,6 @@ warnings.filterwarnings(
     category=DeprecationWarning,
     message=r".*Assistants API is deprecated.*"
 )
-
-# Optional: Load from .env file if available
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
 
 
 class FabricDataAgentClient:

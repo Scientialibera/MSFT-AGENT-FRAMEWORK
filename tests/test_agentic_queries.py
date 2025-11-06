@@ -5,7 +5,6 @@ Tests: 1) Simple direct answer, 2) General knowledge, 3) Complex multi-step anal
 """
 
 import asyncio
-import os
 import sys
 import logging
 from pathlib import Path
@@ -13,7 +12,6 @@ from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from config.src.settings import AzureOpenAISettings
 from src.orchestrator.main import AIAssistant
 
 # Configure logging
@@ -36,13 +34,7 @@ async def run_agentic_tests():
 
     load_dotenv()
 
-    settings = AzureOpenAISettings(
-        endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-        api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-        api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-01-preview"),
-        chat_deployment=os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT"),
-    )
-    assistant = AIAssistant(aoai_settings=settings)
+    assistant = AIAssistant()
 
     # Test queries
     test_queries = [

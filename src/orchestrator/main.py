@@ -42,16 +42,19 @@ ADDING NEW TOOLS (3 Steps)
    - Optionally provide get_<NAME>_service() factory function
 """
 
+# Load environment variables once at module import
+from dotenv import load_dotenv
+load_dotenv()
+
+import os
 from pathlib import Path
-from typing import Annotated, Dict, Any
+from typing import Dict, Any
 
 import structlog
-from pydantic import Field
 from agent_framework import ChatAgent
 from agent_framework.azure import AzureOpenAIChatClient
 from azure.identity import DefaultAzureCredential
 
-from config.src.settings import AzureOpenAISettings
 from src.orchestrator.loader import load_and_register_tools
 
 logger = structlog.get_logger(__name__)
@@ -84,25 +87,37 @@ class AIAssistant:
     Services implement the run(tool_call, tool_config) -> str method.
     """
 
-    def __init__(self, aoai_settings: AzureOpenAISettings) -> None:
+    def __init__(self) -> None:
         """
         Initialize assistant with Azure OpenAI and load tools dynamically.
+        
+        Reads Azure OpenAI configuration from environment variables (.env):
+        - AZURE_OPENAI_ENDPOINT
+        - AZURE_OPENAI_CHAT_DEPLOYMENT
+        - AZURE_OPENAI_API_VERSION (optional, default: 2024-10-01-preview)
         
         Services can be pre-initialized here or created automatically based on
         naming convention. Tool loader scans config/tools/*.json and discovers
         corresponding services in src/<NAME>/service.py.
-        
-        Args:
-            aoai_settings: Azure OpenAI configuration settings
         """
-        self.aoai_settings = aoai_settings
+        # Load Azure OpenAI config from environment
+        self.endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+        if not self.endpoint:
+            raise ValueError("AZURE_OPENAI_ENDPOINT environment variable is required")
+        
+        self.chat_deployment = os.getenv("AZURE_OPENAI_CHAT_DEPLOYMENT")
+        if not self.chat_deployment:
+            raise ValueError("AZURE_OPENAI_CHAT_DEPLOYMENT environment variable is required")
+        
+        self.api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-10-01-preview")
+        
         self.system_prompt = _load_system_prompt()
         self.tools: list = []
         
         # Initialize Azure OpenAI client
         self.chat_client = AzureOpenAIChatClient(
-            endpoint=aoai_settings.endpoint,
-            deployment_name=aoai_settings.chat_deployment,
+            endpoint=self.endpoint,
+            deployment_name=self.chat_deployment,
             credential=DefaultAzureCredential(),
         )
         
