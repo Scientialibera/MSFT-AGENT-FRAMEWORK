@@ -52,7 +52,7 @@ from agent_framework.azure import AzureOpenAIChatClient
 from azure.identity import DefaultAzureCredential
 
 from config.src.settings import AzureOpenAISettings
-from src.ai.loader import load_and_register_tools
+from src.orchestrator.loader import load_and_register_tools
 
 logger = structlog.get_logger(__name__)
 

@@ -27,7 +27,7 @@ from pydantic import Field
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.ai.assistant import AIAssistant
+from src.orchestrator.main import AIAssistant
 from config.src.settings import AzureOpenAISettings, ENABLE_MCP_SERVER
 
 # ============================================================================

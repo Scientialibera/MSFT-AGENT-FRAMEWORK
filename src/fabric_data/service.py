@@ -123,9 +123,3 @@ def get_fabric_data_service() -> FabricDataService:
         )
     
     return _service
-
-
-# Alias for backward compatibility
-def get_fabric_service() -> FabricDataService:
-    """Backward compatibility alias for get_fabric_data_service()."""
-    return get_fabric_data_service()
