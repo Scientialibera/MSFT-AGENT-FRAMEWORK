@@ -1,0 +1,17 @@
+{
+  "type": "function",
+  "function": {
+    "name": "fabricdataagentaccount",
+    "description": "Query the Azure AI Foundry Fabric Data Agent for business intelligence and financial data. This tool connects to the enterprise data platform to retrieve insights, analytics, and reporting data.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The natural language query or data request to send to the Fabric Data Agent. Be specific about what data or insights you need."
+        }
+      },
+      "required": ["query"]
+    }
+  }
+}

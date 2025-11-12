@@ -32,8 +32,8 @@ Query comes in
 LLM sees question + available tools
        ↓
 LLM decides: "Do I need a tool?"
-       ├─ NO  → Return answer (DONE)
-       └─ YES → Call tool(s)
+        NO  → Return answer (DONE)
+        YES → Call tool(s)
               ↓
            Tool executes → returns result
               ↓
@@ -41,8 +41,8 @@ LLM decides: "Do I need a tool?"
               (LLM will see it)
               ↓
            LLM decides: "Answer or call another tool?"
-              ├─ ANSWER → Return answer (DONE)
-              └─ TOOL   → Loop (go back)
+               ANSWER → Return answer (DONE)
+               TOOL   → Loop (go back)
 ```
 
 This pattern applies to any LLM-based agent: the LLM makes tool decisions automatically because it sees all results in context.
@@ -316,26 +316,26 @@ LLM reasoning:
 
 ```
 src/
-├── orchestrator/
-│   ├── main.py                   # AIAssistant + tool loader
-│   ├── loader.py                 # Dynamic tool discovery
-│   └── __init__.py
-├── fabric_data/
-│   ├── client.py
-│   └── service.py                # Service + factory function
-└── __init__.py
+ orchestrator/
+    main.py                   # AIAssistant + tool loader
+    loader.py                 # Dynamic tool discovery
+    __init__.py
+ fabric_data/
+    client.py
+    service.py                # Service + factory function
+ __init__.py
 
 config/
-├── orchestrator/
-│   └── system_prompt.txt
-├── src/
-│   └── settings.py
-├── tools/
-│   └── fabric_data.json          # Tool config
-└── .env
+ orchestrator/
+    system_prompt.txt
+ src/
+    settings.py
+ tools/
+    fabric_data.json          # Tool config
+ .env
 
 tests/
-└── test_agentic_queries.py
+ test_agentic_queries.py
 ```
 
 ---

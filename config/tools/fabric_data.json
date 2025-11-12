@@ -2,17 +2,17 @@
   "type": "function",
   "function": {
     "name": "fabric_data",
-    "description": "Query business data from Fabric (semantic models, warehouses, lakehouses) using natural language. This tool translates your intent into the appropriate query language and returns results. Use natural language to express what data you need, not SQL or technical queries.",
+    "description": "Execute SQL queries directly against Fabric SQL endpoint (warehouses, lakehouses). Returns inline results for queries with <= MAX_ROWS_INLINE rows. For larger datasets, suggests using sql_to_csv tool to get downloadable CSV. Supports standard T-SQL syntax.",
     "parameters": {
       "type": "object",
       "properties": {
         "reasoning": {
           "type": "string",
-          "description": "Explain your intent: Why are you querying? What question is the user asking? For example: 'User wants to see all distinct values in the Category field to understand available categories' or 'User needs top 5 accounts by balance for comparison analysis'"
+          "description": "Explain your intent: Why are you executing this query? What question is the user asking? For example: 'User wants to see account balances to identify top performers' or 'User needs revenue breakdown by region for Q4 analysis'"
         },
         "query": {
           "type": "string",
-          "description": "Natural language expression of what data you need (NOT SQL). Examples: 'What are the distinct categories?', 'Show me the top 5 accounts by closing balance', 'What is the total revenue by region?', 'List all product names ordered alphabetically'"
+          "description": "T-SQL query to execute against Fabric SQL endpoint. Examples: 'SELECT DISTINCT Category FROM Products ORDER BY Category', 'SELECT TOP 5 AccountName, ClosingBalance FROM Accounts ORDER BY ClosingBalance DESC', 'SELECT Region, SUM(Revenue) as TotalRevenue FROM Sales WHERE Quarter = 4 GROUP BY Region'"
         }
       },
       "required": ["reasoning", "query"]

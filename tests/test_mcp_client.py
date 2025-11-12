@@ -91,7 +91,8 @@ async def test_mcp_via_fastmcp():
                     print(f"\n[INFO] Found process_query tool")
                     
                     test_queries = [
-                        "How many distinct categories in field Category?",
+                        "What data is available?",
+                        "How many accounts have the same name (exact same name)?",
                     ]
                     
                     for query in test_queries:

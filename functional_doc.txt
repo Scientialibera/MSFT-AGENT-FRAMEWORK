@@ -1,0 +1,618 @@
+Functional Design Document 
+
+Project: Purchase order status Agent 
+ERP System: Microsoft Dynamics 365 Finance & Operations 
+Date: October 2025 
+Prepared By: Santosh Kumar Ladi 
+
+Shape 
+
+​​Contents 
+
+​ 
+
+​ 
+
+​ 
+
+​ 
+
+​ 
+
+​ 
+
+​ 
+
+​ 
+
+​ 
+
+​ 
+
+​ 
+
+​ 
+
+​ 
+
+​ 
+
+​ 
+
+​ 
+
+​ 
+
+​ 
+
+​ 
+
+​ 
+
+​​ 
+
+Shape11. Security roles and access .................................................................................................................... 9 
+
+ 
+
+Introduction 
+
+The Purchase Order Status Agent provides quick and accurate retrieval of purchase order details such as status, line details, delivery dates, terms of payment, and method of payment from D365 F&O. The agent supports a variety of user prompts and delivers structured responses across multiple legal entities. 
+
+Shape 
+
+Problem Statement/use case/goal 
+
+Currently, users spend a lot of time searching for purchase order (PO) details in D365 F&O. They need to open different screens, apply filters, and check multiple sections to get the required information. 
+
+This manual process: 
+
+Takes too much time and effort. 
+
+Can lead to errors or missed details. 
+
+Becomes more difficult when handling many POs or when data is spread across legal entities. 
+
+The problem is even bigger when users work through Microsoft Teams, as large data responses can be hard to view and manage. 
+
+Hence, there is a need for an automated agent that can quickly fetch and present PO information in an easy, organized, and user-friendly way. 
+
+Key Goal: 
+
+Faster access: Users get PO data instantly without navigating D365 manually. 
+
+Accurate information: Data is always real-time and pulled directly from D365 F&O. 
+
+Cross-platform integration: Works within Teams or Copilot for better collaboration. 
+
+Improved efficiency: Reduces manual workload for procurement and finance teams. 
+
+Better visibility: Enables managers to track purchase order progress across entities. 
+
+Facilitate data-driven decision-making through accurate and comprehensive historical data for management reporting. 
+
+Shape 
+
+Solution Overview 
+
+The Purchase Order Status Agent is designed to simplify how users access purchase order (PO) information from Microsoft Dynamics 365 Finance & Operations (D365 F&O). 
+It acts as a smart assistant that connects directly to D365 F&O through secure APIs and delivers quick, accurate responses in Microsoft Teams chat. 
+
+ 
+
+ 
+
+How It Works 
+
+User Interaction: 
+The user asks a simple question or prompt in Teams or Copilot, such as: 
+
+“Show me the status of PO12345.” 
+
+“List all line items for PO45678.” 
+
+“Get delivery dates for open POs across all entities.” 
+
+Data Retrieval from D365 F&O: 
+The agent uses a secure data connection (via Dataverse or D365 APIs) to fetch relevant PO details such as: 
+
+PO header information (status, supplier, total amount). 
+
+Line-level details (items, quantities, delivery dates). 
+
+Payment and delivery information. 
+
+Data across multiple legal entities, if requested. 
+
+Response Structuring: 
+The agent formats the fetched data into a clean and structured layout. 
+
+For small or medium-sized data, results are shown directly in chat (tables or cards). 
+
+For large datasets (e.g., more than 30 records), results are automatically exported to Excel and shared as a downloadable file. 
+
+Multi-Entity & Multi-Scenario Support: 
+The agent can handle queries from different legal entities within the same tenant and supports multiple PO types and scenarios (open, closed, invoiced, etc.). 
+
+User-Friendly Experience: 
+The agent supports natural language understanding, so users don’t need to remember commands or PO codes exactly. It interprets intent and provides the most relevant information quickly. 
+
+Historical Data Analysis: 
+
+Leverage historical data to drive data-backed decisions and facilitate timely business actions. 
+
+Shape 
+
+Functional Areas Involved 
+
+Procurement & Sourcing: Purchase order header & line details. 
+
+Accounts Payable: Vendor related details. 
+
+Shape 
+
+Key D365 F&O Objects/Tables Impacted 
+
+Functional Area 
+
+Primary Form 
+
+Key Tables 
+
+Description 
+
+Procurement & Sourcing 
+
+Purchase order header & lines 
+
+Purchtable, Purchlines 
+
+Purchase order details 
+
+Accounts Payable 
+
+Vendors, Purchase orders 
+
+VendTable, PurchTable 
+
+Vendor master and purchase details 
+
+ 
+
+Functional Flow Summary 
+
+ 
+
+ Shape 
+
+User Prompts & Results – Real time based V1 
+
+Retrieve Purchase Order Status 
+
+User Input: What is the status of purchase order ####? 
+ 
+Logic Flow: Accounts payable > Purchase orders > All purchase orders 
+
+Table name: PurchTable	 
+
+Purchase order (PurchID) 
+
+Legal Entity (DataAreaID) 
+
+Vendor Name (PurchName) 
+
+Status (PurchStatus) 
+ 
+Display Output Example: 
+ 
+
+Legal Entity 
+
+Vendor Name 
+
+Status 
+
+USRT 
+
+Fabrikam 
+
+Invoiced 
+
+FRRT 
+
+Northwind Traders 
+
+Invoiced 
+
+USP2 
+
+Add Ingredients Inc. 
+
+Received 
+
+ 
+ 
+Notes: If the purchase order exists across multiple legal entities, results will show status per entity. If a specific entity is requested, only that entity’s data will be displayed. 
+
+Retrieve Purchase Order Line Details 
+
+User Input: What are the line details for purchase order ####? 
+ 
+Logic Flow: Accounts payable > Purchase orders > All purchase orders > Lines 
+
+Table name: PurchLine 
+
+- Purchase order (PurchID) 
+	- Line Number (LineNumber)	 
+	- Item Number (ItemID) 
+	- LineDescription (Name) 
+
+Display Output Example: 
+ 
+
+Legal Entity 
+
+Line Number 
+
+Item Number 
+
+Line Description 
+
+USP2 
+
+1 
+
+M7001 
+
+Sulfur Dioxide 
+
+USP2 
+
+2 
+
+M7002 
+
+Sodium Benzoate 
+
+USMF 
+
+1 
+
+M0061 
+
+Catalyst 
+
+USMF 
+
+2 
+
+M0062 
+
+Resin 
+
+ 
+Notes: If the purchase order exists across multiple legal entities, results will show lines per entity. If a specific entity is requested, only that entity’s data will be displayed. 
+
+Retrieve Purchase Orders for a Vendor 
+
+User Input: Can you provide a list of purchase orders for vendor #### in USP2 legal entity? 
+ 
+Logic Flow: Accounts payable > Purchase orders > All purchase orders > Filter by Vendor 
+ 
+Table name: PurchTable 
+
+- Vendor name (PurchName) 
+	- Vendor ID (OrderAccount) 
+	- Purchase order number (Purch ID) 
+	- Status (PurchStatus) 
+	- Legal entity (DataAreaID) 
+
+Table name: VendTable 
+
+- Vendor Id (AccountNum) 
+
+Display Output Example: 
+ 
+
+Purchase Order Number 
+
+Vendor Name 
+
+Status 
+
+Legal Entity 
+
+9 
+
+Add Ingredients Inc. 
+
+Invoiced 
+
+USP2 
+
+10 
+
+Add Ingredients Inc. 
+
+Open 
+
+USP2 
+
+ 
+ 
+Notes: If the legal entity is not mentioned, the system retrieves records from all available entities. 
+
+Retrieve Invoiced Purchase Orders for a Vendor 
+
+User Input: Can you provide a list of invoiced purchase orders for vendor #### in USP2 legal entity? 
+ 
+Logic Flow: Accounts payable > Purchase orders > All purchase orders > Filter by Vendor & Status 
+
+Table name: PurchTable 
+
+- Purchase order number (Purch ID) 
+	- Vendor name (PurchName) 
+	- Status (PurchStatus) 
+	- Legal entity (DataAreaID) 
+
+ 
+ 
+Display Output Example: 
+
+Purchase Order Number 
+
+Vendor Name 
+
+Status 
+
+Legal Entity 
+
+9 
+
+Add Ingredients Inc. 
+
+Invoiced 
+
+USP2 
+
+ 
+
+Notes: If the legal entity is not mentioned, the system retrieves records from all available entities. 
+
+Retrieve Open Purchase Orders for a Vendor 
+
+User Input: Can you provide a list of open purchase orders for vendor #### in USP2 legal entity? 
+ 
+Logic Flow: Accounts payable > Purchase orders > All purchase orders > Filter by Vendor & Status 
+
+ 
+Table name: PurchTable 
+
+- Purchase order number (Purch ID) 
+	- Vendor name (PurchName) 
+	- Status (PurchStatus) 
+	- Legal entity (DataAreaID) 
+
+ 
+Display Output Example: 
+ 
+
+Purchase Order Number 
+
+Vendor Name 
+
+Status 
+
+Legal Entity 
+
+10 
+
+Add Ingredients Inc. 
+
+Open 
+
+USP2 
+
+ 
+Notes: If the legal entity is not mentioned, the system retrieves records from all available entities. 
+
+Retrieve Delivery Date of a Purchase Order 
+
+User Input: What is the delivery date of purchase order #### in USP2 legal entity? 
+ 
+Logic Flow: Accounts payable > Purchase orders > All purchase orders > Filter by PO Header 
+Table name: PurchTable 
+
+- Purchase order number (Purch ID) 
+	- Legal entity (DataAreaID) 
+	- Delivery date (DeliveryDate) 
+
+ 
+Display Output Example: 
+ 
+The delivery date for purchase order #### in USP2 legal entity is November 29, 2016. 
+
+Notes: If the legal entity is not mentioned, the system retrieves records from all available entities. 
+
+Retrieve Terms of Payment of a Purchase Order 
+
+User Input: What are the terms of payment for purchase order #### in USP2 legal entity? 
+ 
+Logic Flow: Accounts payable > Purchase orders > All purchase orders > Filter by PO Header 
+
+ 
+Table name: PurchTable 
+
+- Purchase order number (Purch ID) 
+	- Term of payment (Payment) 
+ 
+Display Output Example: 
+ 
+The terms of payment for purchase order #### in USP2 are 'Net30', indicating payment is due within 30 days. 
+
+Notes: If the legal entity is not mentioned, the system retrieves records from all available entities. 
+
+Retrieve Method of Payment of a Purchase Order 
+
+User Input: What is the method of payment for purchase order #### in USP2 legal entity? 
+ 
+Logic Flow: Accounts payable > Purchase orders > All purchase orders > Filter by PO Header 
+
+Table name: PurchTable 
+
+- Purchase order number (Purch ID) 
+	- Method of payment (PaymMode) 
+ 
+Display Output Example: 
+ 
+The method of payment for purchase order #### in USP2 is CHECK. 
+
+Notes: If the legal entity is not mentioned, the system retrieves records from all available entities. 
+
+Retrieve Delivery Term of a Purchase Order 
+
+User Input: What is the delivery term of purchase order #### in USP2 legal entity? 
+ 
+Logic Flow: Accounts payable > Purchase orders > All purchase orders > Filter by PO Header 
+
+Table name: PurchTable 
+
+- Purchase order number (Purch ID) 
+	- Delivery term (DlvTerm) 
+ 
+Display Output Example: 
+ 
+The delivery term for purchase order #### in USP2 is not specified (empty value). 
+
+Notes: If the legal entity is not mentioned, the system retrieves records from all available entities. 
+
+User Prompts & Results – Historical based V2 
+
+Please provide the list of un-invoiced purchase orders for the month/year of #### 
+
+Provide all historical purchase orders older than 12 months for vendor ABC 
+
+Retrieving historical delivery delays of more than 30 days for vendor #### (Vendor aging) 
+
+Retrieve historical POs with payment terms exceeding Net-45 for year #### 
+
+Show purchase orders with overdue payments during current year 
+
+Provide historical purchase orders greater than $30K from year #### 
+
+Introduce automated alerts in Teams for key order events, such as order confirmation, dispatch, invoicing, or delivery delays 
+
+ 
+
+ 
+
+Shape 
+
+Assumptions and Constraints 
+
+The agent will be hosted and accessed through Microsoft Teams or Copilot, using authenticated Microsoft 365 accounts. 
+
+D365 standard data entities or OData endpoints (e.g., PurchaseOrderHeadersV2, PurchaseOrderLines) are accessible for querying PO-related data. 
+
+The agent can only retrieve data based on the user’s security roles in D365 F&O; it cannot override restricted access 
+
+Users will provide reasonably structured prompts or context (e.g., PO number, vendor name, or date range) for the agent to interpret effectively. 
+
+ 
+
+ 
+
+Negative use case scenarios 
+
+Invalid or Incomplete User Prompt 
+
+User provides an unclear or incomplete prompt that does not contain enough context to identify the PO or required detail. 
+
+ 
+
+Example: 
+
+“Show me the order” or “Get PO details” without specifying a PO number, vendor, or date. 
+
+ 
+
+Expected System Behaviour: 
+
+The agent validates the input and responds with a clarifying message: 
+“Please specify the Purchase Order number or Vendor name to continue.” 
+
+ 
+
+Unauthorized Access 
+
+User attempts to retrieve data from a legal entity or module for which they do not have access rights in D365 F&O. 
+
+ 
+
+Expected System Behaviour: 
+
+The agent checks user permissions. 
+
+If unauthorized, it responds: 
+“You do not have permission to view data for this legal entity or purchase order.” 
+
+No data is retrieved or displayed. 
+
+ 
+
+Purchase Order Not Found 
+
+User enters a non-existing or incorrectly typed PO number. 
+
+ 
+
+Expected System Behavior: 
+
+The system queries D365 F&O and receives a null or empty response. 
+
+The agent replies: 
+“No purchase order found with the provided number. Please check and try again.” 
+
+ 
+
+Large Data Volume (Over Threshold) 
+
+Query returns a large dataset exceeding 30 records. 
+
+Expected System Behaviour: 
+
+The agent detects data volume > 30. 
+
+Instead of sending full data in Teams, it exports results to Excel and shares a file link. 
+
+The chat message includes a short summary and a link: 
+“Data exceeds viewable limit — full report exported to Excel.” 
+
+Historical Data Not Available 
+
+User requests data older than the retention period (e.g., over 1 year) or from an unarchived vendor. 
+
+ 
+
+Expected System Behaviour: 
+
+The flow checks the archive dataset. 
+
+If not available, it returns: 
+“No historical records found for the requested period/vendor.” 
+
+ 
+
+ 
+
+Shape 
+
+11. Security roles and access 
+
+All users are authenticated using Microsoft Entra ID 
+
+Enforces security and data access boundaries based on the user's identity and roles. 
+
+ 
+
+ 

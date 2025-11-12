@@ -1,11 +1,29 @@
+# Azure AI & Authentication
 azure-identity>=1.15.0
+azure-ai-projects>=1.0.0
+azure-core>=1.24.0
+
+# OpenAI Integration
 openai>=1.0.0
 fabric-data-agent-sdk
 structlog>=23.1.0
-pydantic>=2.0.0
-python-dotenv>=1.0.0
-tenacity>=8.2.0
-agent-framework
+
+# MCP Framework (includes HTTP server support via FastMCP)
 mcp>=0.1.0
-anyio>=4.0.0
 fastmcp>=0.1.0
+
+# Configuration & Utilities
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0
+structlog>=23.1.0
+tenacity>=8.2.0
+anyio>=4.0.0
+
+# SQL & Data Processing (for direct Fabric SQL execution)
+pyodbc>=5.0.0
+pandas>=2.0.0
+azure-storage-blob>=12.0.0
+
+# Additional dependencies
+typing-extensions>=4.0.0

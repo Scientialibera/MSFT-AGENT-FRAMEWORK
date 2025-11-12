@@ -1,0 +1,22 @@
+{
+  "type": "function",
+  "function": {
+    "name": "sql_to_csv",
+    "description": "Execute SQL query against Fabric SQL endpoint and export results to CSV file. Uploads CSV to Azure Blob Storage and returns shareable download URL with SAS token. Use this tool when query results exceed MAX_ROWS_INLINE limit or when user explicitly requests downloadable data.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "reasoning": {
+          "type": "string",
+          "description": "Explain why you're exporting to CSV: Is the result set too large for inline display? Did the user request a downloadable file? For example: 'Result set exceeded 100 rows, creating CSV export' or 'User requested full customer list as downloadable file'"
+        },
+        "query": {
+          "type": "string",
+          "description": "T-SQL query to execute against Fabric SQL endpoint. Results will be exported to CSV. Examples: 'SELECT * FROM Customers ORDER BY CustomerName', 'SELECT AccountID, AccountName, Balance FROM Accounts WHERE Balance > 10000', 'SELECT * FROM SalesTransactions WHERE TransactionDate >= ''2024-01-01'''"
+        }
+      },
+      "required": ["reasoning", "query"]
+    }
+  }
+}
+

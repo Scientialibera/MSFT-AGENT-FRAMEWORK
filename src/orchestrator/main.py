@@ -56,23 +56,39 @@ from agent_framework.azure import AzureOpenAIChatClient
 from azure.identity import DefaultAzureCredential
 
 from src.orchestrator.loader import load_and_register_tools
+from src.orchestrator.middleware import function_call_middleware
 
 logger = structlog.get_logger(__name__)
 
-SYSTEM_PROMPT_FILE = "config/orchestrator/system_prompt.txt"
+# System prompt selection based on mode
+AGENT_MODE = os.getenv("AGENT_MODE", "full").lower()  # "full" or "csv_only"
+if AGENT_MODE == "csv_only":
+    SYSTEM_PROMPT_FILE = "config/orchestrator/system_prompt_csv_only.txt"
+else:
+    SYSTEM_PROMPT_FILE = "config/orchestrator/system_prompt_full.txt"
 
 
 def _load_system_prompt() -> str:
-    """Load system prompt from configuration file."""
+    """Load system prompt from configuration file based on AGENT_MODE."""
     try:
         prompt_path = Path(SYSTEM_PROMPT_FILE)
         if not prompt_path.exists():
             raise FileNotFoundError(
                 f"System prompt file not found: {SYSTEM_PROMPT_FILE}"
             )
+        logger.info(
+            "Loaded system prompt",
+            mode=AGENT_MODE,
+            prompt_file=SYSTEM_PROMPT_FILE
+        )
         return prompt_path.read_text(encoding="utf-8").strip()
     except Exception as e:
-        logger.error("Failed to load system prompt", error=str(e))
+        logger.error(
+            "Failed to load system prompt",
+            error=str(e),
+            mode=AGENT_MODE,
+            prompt_file=SYSTEM_PROMPT_FILE
+        )
         raise
 
 
@@ -124,11 +140,12 @@ class AIAssistant:
         # Load all tools (tool_loader handles service discovery/creation)
         self._load_tools()
         
-        # Create agent with tools
+        # Create agent with tools and middleware
         self.agent = ChatAgent(
             chat_client=self.chat_client,
             instructions=self.system_prompt,
             tools=self.tools,
+            middleware=[function_call_middleware],
         )
         
         logger.info("Initialized AI Assistant with Agent Framework")
@@ -202,3 +219,28 @@ class AIAssistant:
                     except Exception as e:
                         logger.warning("Failed to close service", service_name=attr_name, error=str(e))
         logger.info("AI Assistant closed")
+
+
+# Singleton instance for testing
+_assistant_instance = None
+
+
+async def process_query(question: str) -> str:
+    """
+    Simple helper function to process a query using the AI Assistant.
+    Creates a singleton instance for efficiency during testing.
+    
+    Args:
+        question: User's question to process
+        
+    Returns:
+        str: Agent's response text
+    """
+    global _assistant_instance
+    
+    if _assistant_instance is None:
+        _assistant_instance = AIAssistant()
+        logger.info("Created new AI Assistant instance")
+    
+    result = await _assistant_instance.process_question(question)
+    return result["response"]
