@@ -255,24 +255,6 @@ graph TB
     style ESC fill:#fce4ec
 ```
 
-## Configuration Hierarchy
-
-```mermaid
-graph TB
-    subgraph "Priority (highest to lowest)"
-        ENV[Environment Variables<br/>AZURE_OPENAI_*]
-        TOML[config/agent.toml<br/>Main config]
-        PYPROJ[pyproject.toml<br/>[tool.agent] section]
-        DEFAULTS[Built-in defaults]
-    end
-    
-    ENV --> MERGED[Merged Configuration]
-    TOML --> MERGED
-    PYPROJ --> MERGED
-    DEFAULTS --> MERGED
-    MERGED --> APP[AgentConfig object]
-```
-
 ## Component Responsibilities
 
 | Component | File | Responsibility |
