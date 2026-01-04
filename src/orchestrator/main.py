@@ -56,7 +56,7 @@ ADDING NEW TOOLS (3 Steps)
 """
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import structlog
 from agent_framework import ChatAgent
@@ -67,6 +67,7 @@ from src.orchestrator.config import get_config, AgentConfig
 from src.orchestrator.loader import load_and_register_tools
 from src.orchestrator.middleware import function_call_middleware
 from src.orchestrator.mcp_loader import MCPManager
+from src.orchestrator.workflow_loader import WorkflowManager
 
 logger = structlog.get_logger(__name__)
 
@@ -87,13 +88,16 @@ def _load_system_prompt(config: AgentConfig) -> str:
 
 class AIAssistant:
     """
-    AI Assistant with dynamic tool loading, MCP support, and service discovery.
+    AI Assistant with dynamic tool loading, MCP support, workflows, and service discovery.
     
     Uses Microsoft Agent Framework to reason across multiple data sources.
     
     Tools are loaded from:
     1. Local tools: config/tools/*.json files matched to src/<NAME>/service.py
     2. MCP servers: Configured in agent.toml [[agent.mcp]] sections
+    
+    Workflows are loaded from:
+    - agent.toml [[agent.workflows]] sections - multi-agent orchestration pipelines
     
     Services implement the run(tool_call) -> str method.
     """
@@ -124,6 +128,9 @@ class AIAssistant:
         self._mcp_manager = MCPManager()
         self._mcp_initialized = False
         
+        # Workflow manager for multi-agent pipelines
+        self._workflow_manager: Optional[WorkflowManager] = None
+        
         # Initialize Azure OpenAI client
         self.chat_client = AzureOpenAIChatClient(
             endpoint=self.config.azure_openai_endpoint,
@@ -145,9 +152,9 @@ class AIAssistant:
     
     async def initialize(self) -> "AIAssistant":
         """
-        Initialize async components (MCP servers).
+        Initialize async components (MCP servers, workflows).
         
-        Call this after creating the instance to enable MCP support:
+        Call this after creating the instance to enable MCP and workflow support:
         
             assistant = AIAssistant()
             await assistant.initialize()
@@ -163,6 +170,16 @@ class AIAssistant:
             mcp_tools = await self._mcp_manager.load_mcp_servers(self.config.mcp_configs)
             logger.info("MCP servers initialized", count=len(mcp_tools))
         
+        # Load workflows if configured
+        if self.config.workflow_configs:
+            self._workflow_manager = WorkflowManager(self.chat_client)
+            self._workflow_manager.load_workflows(self.config.workflow_configs)
+            logger.info(
+                "Workflows initialized", 
+                count=len(self._workflow_manager.workflows),
+                names=self._workflow_manager.workflow_names
+            )
+        
         # Combine local tools with MCP tools
         all_tools = self.tools + self._mcp_manager.tools
         
@@ -175,11 +192,13 @@ class AIAssistant:
         )
         
         self._mcp_initialized = True
+        workflow_count = len(self._workflow_manager.workflows) if self._workflow_manager else 0
         logger.info(
             "AI Assistant fully initialized",
             local_tools=len(self.tools),
             mcp_tools=len(self._mcp_manager.tools),
-            total_tools=len(all_tools)
+            total_tools=len(all_tools),
+            workflows=workflow_count
         )
         
         return self
@@ -268,6 +287,111 @@ class AIAssistant:
                 "response": f"Error: {str(e)}",
                 "success": False,
             }
+
+    async def run_workflow(
+        self, 
+        workflow_name: str, 
+        message: str,
+        stream: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Run a named workflow with the given message.
+        
+        Workflows are multi-agent pipelines that can include:
+        - Sequential execution (agents run in order)
+        - Custom routing (user-defined agent graph)
+        
+        Args:
+            workflow_name: Name of the workflow to run (as defined in config)
+            message: Input message to process through the workflow
+            stream: If True, streams responses (returns async generator)
+            
+        Returns:
+            Dictionary containing:
+                - workflow: Name of the workflow
+                - message: Original input message
+                - response: Combined output from all workflow agents
+                - success: Whether workflow completed successfully
+                - author: Name of the final responding agent
+        """
+        # Auto-initialize if needed
+        if self.agent is None:
+            await self.initialize()
+        
+        if not self._workflow_manager:
+            return {
+                "workflow": workflow_name,
+                "message": message,
+                "response": "No workflows configured",
+                "success": False,
+            }
+        
+        workflow_agent = self._workflow_manager.get_workflow(workflow_name)
+        if not workflow_agent:
+            available = self._workflow_manager.workflow_names
+            return {
+                "workflow": workflow_name,
+                "message": message,
+                "response": f"Workflow '{workflow_name}' not found. Available: {available}",
+                "success": False,
+            }
+        
+        logger.info("Running workflow", workflow=workflow_name, message=message[:100])
+        
+        try:
+            # Import message types
+            from agent_framework import ChatMessage, Role
+            
+            # Create thread for workflow state
+            thread = workflow_agent.get_new_thread()
+            messages = [ChatMessage(role=Role.USER, content=message)]
+            
+            if stream:
+                # Return streaming generator
+                async def stream_workflow():
+                    async for update in workflow_agent.run_stream(messages, thread=thread):
+                        yield {
+                            "text": update.text,
+                            "author": update.author_name,
+                            "done": False
+                        }
+                    yield {"text": "", "author": None, "done": True}
+                return stream_workflow()
+            else:
+                # Non-streaming execution
+                response = await workflow_agent.run(messages, thread=thread)
+                
+                # Collect response text
+                response_text = ""
+                final_author = None
+                for msg in response.messages:
+                    if msg.text:
+                        response_text += f"\n\n**{msg.author_name}:**\n{msg.text}" if msg.author_name else msg.text
+                        final_author = msg.author_name
+                
+                logger.info("Workflow completed", workflow=workflow_name, author=final_author)
+                return {
+                    "workflow": workflow_name,
+                    "message": message,
+                    "response": response_text.strip(),
+                    "success": True,
+                    "author": final_author
+                }
+                
+        except Exception as e:
+            logger.error("Workflow failed", workflow=workflow_name, error=str(e))
+            return {
+                "workflow": workflow_name,
+                "message": message,
+                "response": f"Error: {str(e)}",
+                "success": False,
+            }
+
+    def list_workflows(self) -> list:
+        """Get list of available workflow names."""
+        if not self._workflow_manager:
+            return []
+        return self._workflow_manager.workflow_names
 
     async def close(self) -> None:
         """Close resources and cleanup."""

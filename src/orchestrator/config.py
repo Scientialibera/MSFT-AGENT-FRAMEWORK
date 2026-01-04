@@ -62,6 +62,10 @@ class AgentConfig:
         from src.orchestrator.mcp_loader import parse_mcp_configs
         self.mcp_configs = parse_mcp_configs(self._config)
         
+        # Workflow settings
+        from src.orchestrator.workflow_loader import parse_workflow_configs
+        self.workflow_configs = parse_workflow_configs(self._config)
+        
     def _get(self, key: str, default: Any = None) -> Any:
         """Get configuration value with default."""
         return self._config.get(key, default)

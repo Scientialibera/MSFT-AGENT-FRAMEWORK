@@ -84,3 +84,61 @@ config_dir = "config/tools"
 # type = "websocket"
 # enabled = true
 # url = "wss://api.example.com/mcp"
+
+# ==============================================================================
+# WORKFLOW CONFIGURATION (Multi-Agent Pipelines)
+# Define multi-agent workflows for complex orchestration patterns
+# ==============================================================================
+
+# Workflows allow you to chain multiple agents together in predefined patterns.
+# Supported types: "sequential", "custom"
+
+# ------------------------------------------------------------------------------
+# Example 1: Sequential Workflow (agents execute in order)
+# ------------------------------------------------------------------------------
+# [[agent.workflows]]
+# name = "content-pipeline"
+# type = "sequential"
+# enabled = true
+# 
+# # Each agent's output becomes the next agent's input
+# [[agent.workflows.agents]]
+# name = "Researcher"
+# instructions = "Research the given topic and provide key facts and insights."
+# 
+# [[agent.workflows.agents]]
+# name = "Writer"
+# instructions = "Write engaging content based on the research provided."
+# 
+# [[agent.workflows.agents]]
+# name = "Reviewer"
+# instructions = "Review the content and provide a final polished version."
+
+# ------------------------------------------------------------------------------
+# Example 2: Custom Workflow (user-defined graph with edges)
+# ------------------------------------------------------------------------------
+# [[agent.workflows]]
+# name = "support-escalation"
+# type = "custom"
+# enabled = true
+# start = "Triage"
+# 
+# [[agent.workflows.agents]]
+# name = "Triage"
+# instructions = "Analyze the customer issue and determine severity."
+# 
+# [[agent.workflows.agents]]
+# name = "TechSupport"
+# instructions = "Provide technical solutions for the issue."
+# 
+# [[agent.workflows.agents]]
+# name = "Manager"
+# instructions = "Handle escalated issues with customer care."
+# 
+# [[agent.workflows.edges]]
+# from = "Triage"
+# to = "TechSupport"
+# 
+# [[agent.workflows.edges]]
+# from = "TechSupport"
+# to = "Manager"
