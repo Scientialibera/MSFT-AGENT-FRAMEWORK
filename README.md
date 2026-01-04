@@ -249,6 +249,18 @@ url = "wss://api.example.com/mcp"
 | `http` | REST APIs with SSE | `url`, optional `headers` |
 | `websocket` | Real-time connections | `url` |
 
+### Windows Note
+
+On Windows, `uvx` may not be directly available in PATH. Use `python -m uv tool run` instead:
+
+```toml
+[[agent.mcp]]
+name = "calculator"
+type = "stdio"
+command = "python"
+args = ["-m", "uv", "tool", "run", "mcp-server-calculator"]
+```
+
 ### Popular MCP Servers
 
 ```toml
