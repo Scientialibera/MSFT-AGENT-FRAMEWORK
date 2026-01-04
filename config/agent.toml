@@ -1,0 +1,46 @@
+# ==============================================================================
+# AGENT CONFIGURATION - Copy this file and customize for your project
+# ==============================================================================
+# This file contains all configuration for your AI Assistant.
+# Copy to your project root and update the values.
+# ==============================================================================
+
+[agent]
+# System prompt file (relative to project root)
+system_prompt = "config/system_prompt.txt"
+
+# Logging level (DEBUG, INFO, WARNING, ERROR)
+log_level = "INFO"
+
+# ==============================================================================
+# AZURE OPENAI CONFIGURATION
+# Required for the agent to function
+# ==============================================================================
+
+[agent.azure_openai]
+# Your Azure OpenAI endpoint URL
+# Example: "https://your-resource.openai.azure.com/"
+endpoint = "https://your-resource.openai.azure.com/"
+
+# Your deployment name for chat completions
+# Example: "gpt-4o"
+deployment = "gpt-4o"
+
+# API version (optional, defaults to latest)
+api_version = "2024-10-01-preview"
+
+# ==============================================================================
+# TOOL CONFIGURATION
+# Define tool-specific settings here
+# Each tool can have its own section: [agent.tools.<tool_name>]
+# ==============================================================================
+
+[agent.tools]
+# Directory containing tool JSON definitions
+config_dir = "config/tools"
+
+# Example: Configure settings for the example_tool
+# [agent.tools.example_tool]
+# api_base_url = "https://api.example.com"
+# timeout = 30
+# max_retries = 3

@@ -1,4 +1,4 @@
-# Multi-stage build for Fabric Data Agent MCP Server
+# Multi-stage build for MSFT Agent Framework
 FROM python:3.12-slim as builder
 
 WORKDIR /app
@@ -8,28 +8,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --user --no-cache-dir -r requirements.txt
+# Copy pyproject.toml and install Python dependencies
+COPY pyproject.toml .
+RUN pip install --user --no-cache-dir .
 
 # Final stage
 FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install runtime dependencies including ODBC Driver for SQL Server
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
-    curl \
-    gnupg \
     && rm -rf /var/lib/apt/lists/*
-
-# Install Microsoft ODBC Driver 18 for SQL Server
-RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - && \
-    curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list && \
-    apt-get update && \
-    ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 && \
-    rm -rf /var/lib/apt/lists/*
 
 # Copy Python packages from builder
 COPY --from=builder /root/.local /root/.local
@@ -40,15 +31,9 @@ ENV PATH=/root/.local/bin:$PATH \
     PYTHONDONTWRITEBYTECODE=1
 
 # Copy application code
-COPY . .
+COPY src/ ./src/
+COPY config/ ./config/
+COPY pyproject.toml .
 
-# Set environment variable to enable MCP server
-ENV ENABLE_MCP_SERVER=true
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
-
-# Run the MCP server
-# The server communicates via stdio, so we keep it in the foreground
-CMD ["python", "tests/mcp_server.py"]
+# Set default command (override as needed)
+CMD ["python", "-m", "src.orchestrator.main"]
