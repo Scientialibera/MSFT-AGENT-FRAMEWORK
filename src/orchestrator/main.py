@@ -66,6 +66,7 @@ from azure.identity import DefaultAzureCredential
 from src.orchestrator.config import get_config, AgentConfig
 from src.orchestrator.loader import load_and_register_tools
 from src.orchestrator.middleware import function_call_middleware
+from src.orchestrator.mcp_loader import MCPManager
 
 logger = structlog.get_logger(__name__)
 
@@ -86,11 +87,13 @@ def _load_system_prompt(config: AgentConfig) -> str:
 
 class AIAssistant:
     """
-    AI Assistant with dynamic tool loading and service discovery.
+    AI Assistant with dynamic tool loading, MCP support, and service discovery.
     
     Uses Microsoft Agent Framework to reason across multiple data sources.
-    Tools are discovered from config/tools/*.json files and matched to services
-    using naming convention: config/tools/<NAME>.json → src/<NAME>/service.py
+    
+    Tools are loaded from:
+    1. Local tools: config/tools/*.json files matched to src/<NAME>/service.py
+    2. MCP servers: Configured in agent.toml [[agent.mcp]] sections
     
     Services implement the run(tool_call) -> str method.
     """
@@ -98,6 +101,12 @@ class AIAssistant:
     def __init__(self, config: AgentConfig = None) -> None:
         """
         Initialize assistant with Azure OpenAI and load tools dynamically.
+        
+        Note: MCP servers require async initialization. Call `await assistant.initialize()`
+        after creating the instance, or use the async context manager:
+        
+            async with await AIAssistant.create() as assistant:
+                result = await assistant.process_question("Hello!")
         
         Args:
             config: Optional AgentConfig instance. If not provided, loads from
@@ -111,6 +120,10 @@ class AIAssistant:
         self.system_prompt = _load_system_prompt(self.config)
         self.tools: list = []
         
+        # MCP manager for external tool servers
+        self._mcp_manager = MCPManager()
+        self._mcp_initialized = False
+        
         # Initialize Azure OpenAI client
         self.chat_client = AzureOpenAIChatClient(
             endpoint=self.config.azure_openai_endpoint,
@@ -118,22 +131,87 @@ class AIAssistant:
             credential=DefaultAzureCredential(),
         )
         
-        # Load all tools dynamically
+        # Load local tools (sync)
         self._load_tools()
         
-        # Create agent with tools and middleware
+        # Agent will be created after MCP initialization
+        self.agent = None
+        
+        logger.info(
+            "AI Assistant created (call initialize() for MCP support)",
+            local_tools_count=len(self.tools),
+            deployment=self.config.azure_openai_deployment
+        )
+    
+    async def initialize(self) -> "AIAssistant":
+        """
+        Initialize async components (MCP servers).
+        
+        Call this after creating the instance to enable MCP support:
+        
+            assistant = AIAssistant()
+            await assistant.initialize()
+        
+        Returns:
+            self for method chaining
+        """
+        if self._mcp_initialized:
+            return self
+        
+        # Load MCP servers if configured
+        if self.config.mcp_configs:
+            mcp_tools = await self._mcp_manager.load_mcp_servers(self.config.mcp_configs)
+            logger.info("MCP servers initialized", count=len(mcp_tools))
+        
+        # Combine local tools with MCP tools
+        all_tools = self.tools + self._mcp_manager.tools
+        
+        # Create agent with all tools
         self.agent = ChatAgent(
             chat_client=self.chat_client,
             instructions=self.system_prompt,
-            tools=self.tools,
+            tools=all_tools,
             middleware=[function_call_middleware],
         )
         
+        self._mcp_initialized = True
         logger.info(
-            "Initialized AI Assistant",
-            tools_count=len(self.tools),
-            deployment=self.config.azure_openai_deployment
+            "AI Assistant fully initialized",
+            local_tools=len(self.tools),
+            mcp_tools=len(self._mcp_manager.tools),
+            total_tools=len(all_tools)
         )
+        
+        return self
+    
+    @classmethod
+    async def create(cls, config: AgentConfig = None) -> "AIAssistant":
+        """
+        Factory method to create and initialize an AI Assistant.
+        
+        Use this for full initialization including MCP support:
+        
+            assistant = await AIAssistant.create()
+            result = await assistant.process_question("Hello!")
+        
+        Args:
+            config: Optional AgentConfig instance
+            
+        Returns:
+            Fully initialized AIAssistant instance
+        """
+        instance = cls(config)
+        await instance.initialize()
+        return instance
+    
+    async def __aenter__(self) -> "AIAssistant":
+        """Async context manager entry."""
+        await self.initialize()
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
+        """Async context manager exit."""
+        await self.close()
 
     def _load_tools(self) -> None:
         """
@@ -168,6 +246,10 @@ class AIAssistant:
                 - response: Agent's response text
                 - success: Whether processing succeeded
         """
+        # Auto-initialize if needed (for simple usage without MCP)
+        if self.agent is None:
+            await self.initialize()
+        
         logger.info("Processing question", question=question[:100])
 
         try:
@@ -189,6 +271,11 @@ class AIAssistant:
 
     async def close(self) -> None:
         """Close resources and cleanup."""
+        # Close MCP connections
+        if self._mcp_manager:
+            await self._mcp_manager.close()
+        
+        # Close local services
         for attr_name in dir(self):
             if attr_name.endswith('_service'):
                 service = getattr(self, attr_name, None)
@@ -223,7 +310,7 @@ async def process_query(question: str) -> str:
     global _assistant_instance
     
     if _assistant_instance is None:
-        _assistant_instance = AIAssistant()
+        _assistant_instance = await AIAssistant.create()
         logger.info("Created new AI Assistant instance")
     
     result = await _assistant_instance.process_question(question)
@@ -231,14 +318,19 @@ async def process_query(question: str) -> str:
 
 
 async def main():
-    """Example usage of the AI Assistant."""
-    assistant = AIAssistant()
-    
-    try:
+    """Example usage of the AI Assistant with MCP support."""
+    # Method 1: Using async context manager (recommended)
+    async with AIAssistant() as assistant:
         result = await assistant.process_question("Hello! What can you help me with?")
         print(f"Response: {result['response']}")
-    finally:
-        await assistant.close()
+    
+    # Method 2: Using factory method
+    # assistant = await AIAssistant.create()
+    # try:
+    #     result = await assistant.process_question("Hello!")
+    #     print(result["response"])
+    # finally:
+    #     await assistant.close()
 
 
 if __name__ == "__main__":

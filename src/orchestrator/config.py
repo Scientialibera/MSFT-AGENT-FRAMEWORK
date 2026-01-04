@@ -58,6 +58,10 @@ class AgentConfig:
             if isinstance(v, dict)
         }
         
+        # MCP settings
+        from src.orchestrator.mcp_loader import parse_mcp_configs
+        self.mcp_configs = parse_mcp_configs(self._config)
+        
     def _get(self, key: str, default: Any = None) -> Any:
         """Get configuration value with default."""
         return self._config.get(key, default)

@@ -7,6 +7,7 @@ Build intelligent AI assistants that can reason, chain tool calls, and solve com
 ## Features
 
 - **Dynamic Tool Loading** — Drop JSON configs in `config/tools/` and matching services in `src/` for auto-discovery
+- **MCP Support** — Connect to external MCP servers (stdio, HTTP, WebSocket) for extended capabilities
 - **TOML Configuration** — Professional configuration via `config/agent.toml` or `pyproject.toml`
 - **Azure OpenAI Integration** — Built-in support for Azure OpenAI with DefaultAzureCredential
 - **Agentic Reasoning** — Multi-step reasoning with automatic tool chaining
@@ -47,9 +48,10 @@ import asyncio
 from src.orchestrator.main import AIAssistant
 
 async def main():
-    assistant = AIAssistant()
-    result = await assistant.process_question("Hello! What can you help me with?")
-    print(result["response"])
+    # Using async context manager (recommended for MCP support)
+    async with AIAssistant() as assistant:
+        result = await assistant.process_question("Hello! What can you help me with?")
+        print(result["response"])
 
 asyncio.run(main())
 ```
@@ -68,6 +70,7 @@ MSFT-AGENT-FRAMEWORK/
 │   │   ├── main.py            # AIAssistant class
 │   │   ├── config.py          # TOML config loader
 │   │   ├── loader.py          # Dynamic tool loader
+│   │   ├── mcp_loader.py      # MCP server manager
 │   │   └── middleware.py      # Request/response middleware
 │   └── example_tool/           # Example tool implementation
 │       ├── __init__.py
@@ -204,6 +207,91 @@ Environment variables take precedence over TOML:
 | `AZURE_OPENAI_ENDPOINT` | Azure OpenAI endpoint URL |
 | `AZURE_OPENAI_DEPLOYMENT` | Model deployment name |
 | `AZURE_OPENAI_API_VERSION` | API version (optional) |
+
+## MCP (Model Context Protocol) Support
+
+Connect to external MCP servers to extend your agent's capabilities. The framework supports three MCP transport types.
+
+### MCP Configuration
+
+Add MCP servers in `config/agent.toml`:
+
+```toml
+# Stdio MCP - runs as local subprocess
+[[agent.mcp]]
+name = "calculator"
+type = "stdio"
+enabled = true
+command = "uvx"
+args = ["mcp-server-calculator"]
+
+# HTTP MCP - connects to HTTP/SSE endpoint
+[[agent.mcp]]
+name = "my-api"
+type = "http"
+enabled = true
+url = "https://api.example.com/mcp"
+headers = { Authorization = "Bearer your-token" }
+
+# WebSocket MCP - real-time connection
+[[agent.mcp]]
+name = "realtime"
+type = "websocket"
+enabled = true
+url = "wss://api.example.com/mcp"
+```
+
+### MCP Types
+
+| Type | Use Case | Required Fields |
+|------|----------|-----------------|
+| `stdio` | Local CLI tools (uvx, npx) | `command`, `args` |
+| `http` | REST APIs with SSE | `url`, optional `headers` |
+| `websocket` | Real-time connections | `url` |
+
+### Popular MCP Servers
+
+```toml
+# Calculator
+[[agent.mcp]]
+name = "calculator"
+type = "stdio"
+command = "uvx"
+args = ["mcp-server-calculator"]
+
+# Filesystem access
+[[agent.mcp]]
+name = "filesystem"
+type = "stdio"
+command = "uvx"
+args = ["mcp-server-filesystem", "/path/to/allowed/dir"]
+
+# GitHub
+[[agent.mcp]]
+name = "github"
+type = "stdio"
+command = "npx"
+args = ["@modelcontextprotocol/server-github"]
+env = { GITHUB_TOKEN = "your-token" }
+
+# SQLite database
+[[agent.mcp]]
+name = "sqlite"
+type = "stdio"
+command = "uvx"
+args = ["mcp-server-sqlite", "--db-path", "./data.db"]
+```
+
+### Using MCP with the Assistant
+
+MCP servers are automatically loaded during initialization:
+
+```python
+async with AIAssistant() as assistant:
+    # MCP tools are available alongside local tools
+    result = await assistant.process_question("What is 15 * 23 + 45?")
+    print(result["response"])
+```
 
 ## System Prompt
 

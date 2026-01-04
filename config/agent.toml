@@ -30,7 +30,7 @@ deployment = "gpt-4o"
 api_version = "2024-10-01-preview"
 
 # ==============================================================================
-# TOOL CONFIGURATION
+# TOOL CONFIGURATION (Local Tools)
 # Define tool-specific settings here
 # Each tool can have its own section: [agent.tools.<tool_name>]
 # ==============================================================================
@@ -44,3 +44,43 @@ config_dir = "config/tools"
 # api_base_url = "https://api.example.com"
 # timeout = 30
 # max_retries = 3
+
+# ==============================================================================
+# MCP CONFIGURATION (Model Context Protocol Servers)
+# Connect to external MCP servers for additional tool capabilities
+# ==============================================================================
+
+# MCP servers are defined using [[agent.mcp]] array format.
+# Supported types: "stdio", "http", "websocket"
+
+# ------------------------------------------------------------------------------
+# Example 1: Local stdio MCP server (runs as subprocess)
+# ------------------------------------------------------------------------------
+# [[agent.mcp]]
+# name = "calculator"
+# type = "stdio"
+# enabled = true
+# command = "uvx"
+# args = ["mcp-server-calculator"]
+# # Optional: environment variables for the subprocess
+# # env = { API_KEY = "xxx" }
+
+# ------------------------------------------------------------------------------
+# Example 2: HTTP/SSE MCP server
+# ------------------------------------------------------------------------------
+# [[agent.mcp]]
+# name = "my-api"
+# type = "http"
+# enabled = true
+# url = "https://api.example.com/mcp"
+# # Optional: authentication headers
+# # headers = { Authorization = "Bearer your-token" }
+
+# ------------------------------------------------------------------------------
+# Example 3: WebSocket MCP server
+# ------------------------------------------------------------------------------
+# [[agent.mcp]]
+# name = "realtime-data"
+# type = "websocket"
+# enabled = true
+# url = "wss://api.example.com/mcp"
