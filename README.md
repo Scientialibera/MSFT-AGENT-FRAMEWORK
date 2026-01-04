@@ -1,13 +1,74 @@
 # MSFT Agent Framework
 
-A general-purpose, extensible AI agent template using the [Microsoft Agent Framework](https://learn.microsoft.com/en-us/agent-framework/overview/agent-framework-overview) with dynamic tool loading.
+A general-purpose, extensible AI agent template using the [Microsoft Agent Framework](https://learn.microsoft.com/en-us/agent-framework/overview/agent-framework-overview) with dynamic tool loading, MCP support, and multi-agent workflows.
 
-Build intelligent AI assistants that can reason, chain tool calls, and solve complex multi-step problems.
+Build intelligent AI assistants that can reason, chain tool calls, orchestrate multi-agent pipelines, and solve complex multi-step problems.
+
+## Architecture
+
+```mermaid
+graph TB
+    subgraph "User Interface"
+        U[User Query]
+    end
+    
+    subgraph "AIAssistant"
+        O[Orchestrator<br/>main.py]
+        C[Config Loader<br/>config.py]
+        M[Middleware<br/>middleware.py]
+    end
+    
+    subgraph "Tool Sources"
+        L[Local Tools<br/>loader.py]
+        MCP[MCP Manager<br/>mcp_loader.py]
+        W[Workflow Manager<br/>workflow_loader.py]
+    end
+    
+    subgraph "Local Tools"
+        T1[Tool 1<br/>JSON + Service]
+        T2[Tool 2<br/>JSON + Service]
+        TN[Tool N<br/>JSON + Service]
+    end
+    
+    subgraph "MCP Servers"
+        MS1[stdio<br/>Calculator, SQLite...]
+        MS2[HTTP<br/>REST APIs]
+        MS3[WebSocket<br/>Real-time]
+    end
+    
+    subgraph "Workflows"
+        WS[Sequential<br/>Agent Pipeline]
+        WC[Custom<br/>Agent Graph]
+    end
+    
+    subgraph "Azure OpenAI"
+        AO[ChatAgent<br/>gpt-4o / gpt-4o]
+    end
+    
+    U --> O
+    O --> C
+    O --> M
+    O --> L
+    O --> MCP
+    O --> W
+    L --> T1
+    L --> T2
+    L --> TN
+    MCP --> MS1
+    MCP --> MS2
+    MCP --> MS3
+    W --> WS
+    W --> WC
+    O --> AO
+    AO --> O
+    O --> U
+```
 
 ## Features
 
 - **Dynamic Tool Loading** — Drop JSON configs in `config/tools/` and matching services in `src/` for auto-discovery
 - **MCP Support** — Connect to external MCP servers (stdio, HTTP, WebSocket) for extended capabilities
+- **Multi-Agent Workflows** — Define sequential or custom agent pipelines for complex orchestration
 - **TOML Configuration** — Professional configuration via `config/agent.toml` or `pyproject.toml`
 - **Azure OpenAI Integration** — Built-in support for Azure OpenAI with DefaultAzureCredential
 - **Agentic Reasoning** — Multi-step reasoning with automatic tool chaining
@@ -71,14 +132,17 @@ MSFT-AGENT-FRAMEWORK/
 │   │   ├── config.py          # TOML config loader
 │   │   ├── loader.py          # Dynamic tool loader
 │   │   ├── mcp_loader.py      # MCP server manager
+│   │   ├── workflow_loader.py # Workflow manager
 │   │   └── middleware.py      # Request/response middleware
 │   └── example_tool/           # Example tool implementation
 │       ├── __init__.py
 │       └── service.py
 ├── tests/
-│   └── test_agent.py
+│   └── test_integration.py
 ├── deployment/
 │   └── Dockerfile
+├── docs/
+│   └── architecture.md         # Detailed architecture diagram
 └── pyproject.toml
 ```
 
@@ -304,6 +368,113 @@ async with AIAssistant() as assistant:
     result = await assistant.process_question("What is 15 * 23 + 45?")
     print(result["response"])
 ```
+
+## Workflows (Multi-Agent Pipelines)
+
+Create sophisticated multi-agent pipelines where specialized agents work together sequentially or in custom graph patterns.
+
+### Why Workflows?
+
+- **Specialization** — Each agent can focus on one task (research, write, review)
+- **Quality** — Multi-pass processing improves output quality
+- **Control** — Explicit flow vs. dynamic LLM-driven decisions
+- **Composability** — Workflows can be used as building blocks
+
+### Workflow Configuration
+
+Add workflows in `config/agent.toml`:
+
+```toml
+# Sequential Workflow - agents execute in order
+[[agent.workflows]]
+name = "content-pipeline"
+type = "sequential"
+enabled = true
+
+[[agent.workflows.agents]]
+name = "Researcher"
+instructions = "Research the given topic and provide key facts."
+
+[[agent.workflows.agents]]
+name = "Writer"
+instructions = "Write engaging content based on the research."
+
+[[agent.workflows.agents]]
+name = "Reviewer"
+instructions = "Review and polish the content for clarity."
+```
+
+### Custom Workflow (Graph-based)
+
+```toml
+[[agent.workflows]]
+name = "support-triage"
+type = "custom"
+enabled = true
+start = "Triage"
+
+[[agent.workflows.agents]]
+name = "Triage"
+instructions = "Analyze the issue and determine next steps."
+
+[[agent.workflows.agents]]
+name = "TechSupport"
+instructions = "Provide technical solutions."
+
+[[agent.workflows.agents]]
+name = "Escalation"
+instructions = "Handle complex escalated issues."
+
+[[agent.workflows.edges]]
+from = "Triage"
+to = "TechSupport"
+
+[[agent.workflows.edges]]
+from = "TechSupport"
+to = "Escalation"
+```
+
+### Using Workflows
+
+```python
+async with AIAssistant() as assistant:
+    # List available workflows
+    print(assistant.list_workflows())  # ['content-pipeline', 'support-triage']
+    
+    # Run a workflow
+    result = await assistant.run_workflow(
+        "content-pipeline",
+        "Write an article about AI trends in 2025"
+    )
+    
+    print(f"Final output by {result['author']}:")
+    print(result["response"])
+```
+
+### Streaming Workflow Output
+
+```python
+async with AIAssistant() as assistant:
+    # Stream workflow execution
+    stream = await assistant.run_workflow(
+        "content-pipeline",
+        "Write about quantum computing",
+        stream=True
+    )
+    
+    async for update in stream:
+        if update["author"]:
+            print(f"\n[{update['author']}]: ", end="")
+        if update["text"]:
+            print(update["text"], end="", flush=True)
+```
+
+### Workflow Types
+
+| Type | Description | Use Case |
+|------|-------------|----------|
+| `sequential` | Agents execute in defined order | Content pipelines, review chains |
+| `custom` | User-defined graph with edges | Conditional routing, complex flows |
 
 ## System Prompt
 

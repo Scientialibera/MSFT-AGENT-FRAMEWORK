@@ -154,7 +154,7 @@ class WorkflowManager:
         # Build sequential workflow
         workflow = (
             SequentialBuilder()
-            .add_agents(agents)
+            .participants(agents)
             .build()
         )
         
