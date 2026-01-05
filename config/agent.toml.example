@@ -1,0 +1,190 @@
+# ==============================================================================
+# AGENT CONFIGURATION - Copy this file to agent.toml and customize
+# ==============================================================================
+# cp config/agent.toml.example config/agent.toml
+# Then update the values below with your Azure resource details.
+# ==============================================================================
+
+[agent]
+# System prompt file (relative to project root)
+system_prompt = "config/system_prompt.txt"
+
+# Logging level (DEBUG, INFO, WARNING, ERROR)
+log_level = "INFO"
+
+# ==============================================================================
+# AZURE OPENAI CONFIGURATION
+# Required for the agent to function
+# ==============================================================================
+
+[agent.azure_openai]
+endpoint = "https://your-openai-resource.openai.azure.com/"
+deployment = "gpt-4o"  # or gpt-4, gpt-35-turbo, etc.
+api_version = "2024-10-01-preview"
+
+# ==============================================================================
+# TOOL CONFIGURATION (Local Tools)
+# Define tool-specific settings here
+# Each tool can have its own section: [agent.tools.<tool_name>]
+# ==============================================================================
+
+[agent.tools]
+# Directory containing tool JSON definitions
+config_dir = "config/tools"
+
+# Example: Configure settings for the example_tool
+# [agent.tools.example_tool]
+# api_base_url = "https://api.example.com"
+# timeout = 30
+# max_retries = 3
+
+# ==============================================================================
+# MCP CONFIGURATION (Model Context Protocol Servers)
+# Connect to external MCP servers for additional tool capabilities
+# ==============================================================================
+
+# MCP servers are defined using [[agent.mcp]] array format.
+# Supported types: "stdio", "http", "websocket"
+
+# ------------------------------------------------------------------------------
+# Example 1: Local stdio MCP server (runs as subprocess)
+# ------------------------------------------------------------------------------
+# [[agent.mcp]]
+# name = "calculator"
+# type = "stdio"
+# enabled = true
+# command = "uvx"
+# args = ["mcp-server-calculator"]
+# # Optional: environment variables for the subprocess
+# # env = { API_KEY = "xxx" }
+
+# ------------------------------------------------------------------------------
+# Example 2: HTTP/SSE MCP server
+# ------------------------------------------------------------------------------
+# [[agent.mcp]]
+# name = "my-api"
+# type = "http"
+# enabled = true
+# url = "https://api.example.com/mcp"
+# # Optional: authentication headers
+# # headers = { Authorization = "Bearer your-token" }
+
+# ------------------------------------------------------------------------------
+# Example 3: WebSocket MCP server
+# ------------------------------------------------------------------------------
+# [[agent.mcp]]
+# name = "realtime-data"
+# type = "websocket"
+# enabled = true
+# url = "wss://api.example.com/mcp"
+# # Optional: authentication headers
+# # headers = { Authorization = "Bearer your-token" }
+
+# ==============================================================================
+# WORKFLOW CONFIGURATION (Multi-Agent Pipelines)
+# Define multi-agent workflows for complex orchestration patterns
+# ==============================================================================
+
+# Workflows allow you to chain multiple agents together in predefined patterns.
+# Supported types: "sequential", "custom"
+
+# ------------------------------------------------------------------------------
+# Example 1: Sequential Workflow (agents execute in order)
+# ------------------------------------------------------------------------------
+# [[agent.workflows]]
+# name = "content-pipeline"
+# type = "sequential"
+# enabled = true
+# 
+# # Each agent's output becomes the next agent's input
+# [[agent.workflows.agents]]
+# name = "Researcher"
+# instructions = "Research the given topic and provide key facts and insights."
+# 
+# [[agent.workflows.agents]]
+# name = "Writer"
+# instructions = "Write engaging content based on the research provided."
+# 
+# [[agent.workflows.agents]]
+# name = "Reviewer"
+# instructions = "Review the content and provide a final polished version."
+
+# ------------------------------------------------------------------------------
+# Example 2: Custom Workflow (user-defined graph with edges)
+# ------------------------------------------------------------------------------
+# [[agent.workflows]]
+# name = "support-escalation"
+# type = "custom"
+# enabled = true
+# start = "Triage"
+# 
+# [[agent.workflows.agents]]
+# name = "Triage"
+# instructions = "Analyze the customer issue and determine severity."
+# 
+# [[agent.workflows.agents]]
+# name = "TechSupport"
+# instructions = "Provide technical solutions for the issue."
+# 
+# [[agent.workflows.agents]]
+# name = "Manager"
+# instructions = "Handle escalated issues with customer care."
+# 
+# [[agent.workflows.edges]]
+# from = "Triage"
+# to = "TechSupport"
+# 
+# [[agent.workflows.edges]]
+# from = "TechSupport"
+# to = "Manager"
+
+# ------------------------------------------------------------------------------
+# Active Workflow: Q&A Pipeline (for testing)
+# ------------------------------------------------------------------------------
+[[agent.workflows]]
+name = "qa-pipeline"
+type = "sequential"
+enabled = true
+
+[[agent.workflows.agents]]
+name = "Analyst"
+instructions = "Analyze the question and identify key points to address."
+
+[[agent.workflows.agents]]
+name = "Responder"
+instructions = "Provide a clear, concise response based on the analysis."
+
+# ==============================================================================
+# MEMORY CONFIGURATION (Chat History Caching & Persistence)
+# Manages session state across conversations with Redis cache and ADLS persistence
+# ==============================================================================
+
+# Enable memory management (required for chat_id session support)
+# [agent.memory]
+# enabled = true
+
+# ------------------------------------------------------------------------------
+# Cache Configuration (Azure Cache for Redis)
+# Uses DefaultAzureCredential with Entra ID authentication - no API keys required
+# Requires: Azure Cache for Redis with AAD auth enabled + Data Access Policy
+# ------------------------------------------------------------------------------
+[agent.memory.cache]
+enabled = true
+host = "your-redis.redis.cache.windows.net"
+port = 6380
+ssl = true
+ttl = 300
+prefix = "chat:"
+database = 0
+
+# ------------------------------------------------------------------------------
+# Persistence Configuration (Azure Blob Storage)
+# Long-term storage for chat history. Uses DefaultAzureCredential.
+# Requires: Storage account with "Storage Blob Data Contributor" role
+# ------------------------------------------------------------------------------
+[agent.memory.persistence]
+enabled = true
+account_name = "yourstorageaccount"
+container = "chat-history"
+folder = "threads"
+schedule = "ttl+60"
