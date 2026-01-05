@@ -569,11 +569,45 @@ schedule = "ttl+300"  # Persist 5 min before cache TTL expires
 | `chat_id` not in cache, in ADLS | Load from ADLS, cache it |
 | `chat_id` not found anywhere | Create new thread with provided ID |
 
-### Authentication
+### Azure Setup Requirements
+
+#### Azure Cache for Redis (AAD Authentication)
+
+Azure Cache for Redis requires **Data Access Policy** configuration for AAD authentication:
+
+```bash
+# 1. Get your user's Object ID (OID)
+az ad signed-in-user show --query id -o tsv
+
+# 2. Create a Data Access Policy assignment with "Data Owner" permissions
+az redis access-policy-assignment create \
+  --name "your-user-policy" \
+  --policy-name "Data Owner" \
+  --object-id "<your-oid-from-step-1>" \
+  --object-id-alias "<your-email>" \
+  --redis-cache-name "your-redis-name" \
+  --resource-group "your-rg"
+```
+
+> **Note**: The standard `Redis Cache Contributor` RBAC role is NOT sufficient for data operations. You must create a Data Access Policy assignment.
+
+#### Azure Blob Storage (for Persistence)
+
+The persistence layer uses **Azure Blob Storage API** (not ADLS DFS API), so it works with any storage account - Hierarchical Namespace (HNS) is NOT required.
+
+```bash
+# Assign Storage Blob Data Contributor role
+az role assignment create \
+  --assignee "<your-email-or-oid>" \
+  --role "Storage Blob Data Contributor" \
+  --scope "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.Storage/storageAccounts/<account>"
+```
+
+#### Authentication
 
 All Azure services use `DefaultAzureCredential` - no API keys required:
-- **Redis**: Uses AAD token authentication
-- **ADLS**: Uses managed identity or logged-in Azure CLI user
+- **Redis**: Uses AAD token (extracts OID for username)
+- **Storage**: Uses managed identity or logged-in Azure CLI user
 
 ## System Prompt
 

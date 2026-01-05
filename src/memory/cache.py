@@ -66,25 +66,41 @@ class RedisCache:
         self._initialized = True
         
         try:
-            import redis.asyncio as redis
+            import redis.asyncio as redis_async
             from azure.identity.aio import DefaultAzureCredential
+            import jwt
             
             self._credential = DefaultAzureCredential()
             
             # Get token for Azure Cache for Redis
-            # Scope: https://*.redis.cache.windows.net
-            token = await self._credential.get_token(
+            token_response = await self._credential.get_token(
                 "https://redis.azure.com/.default"
             )
             
-            # Connect with AAD token as password
-            self._client = redis.Redis(
+            # Extract the OID (Object ID) from the token for username
+            # Azure Cache for Redis requires username = OID from the AAD token
+            try:
+                decoded = jwt.decode(
+                    token_response.token, 
+                    options={"verify_signature": False}
+                )
+                username = decoded.get("oid", "")
+                logger.debug("Extracted OID from token", oid=username[:8] + "..." if username else "N/A")
+            except Exception as e:
+                logger.warning("Could not decode token for OID, using empty username", error=str(e))
+                username = ""
+            
+            # Connect with AAD token as password and OID as username
+            self._client = redis_async.Redis(
                 host=self.config.host,
                 port=self.config.port,
                 db=self.config.database,
-                password=token.token,
+                username=username,  # OID from the AAD token
+                password=token_response.token,  # The actual access token
                 ssl=self.config.ssl,
                 decode_responses=True,
+                socket_timeout=10,
+                socket_connect_timeout=10,
             )
             
             # Test connection
@@ -92,8 +108,8 @@ class RedisCache:
             logger.info("Redis cache connected", host=self.config.host)
             return True
             
-        except ImportError:
-            logger.warning("redis package not installed, cache disabled")
+        except ImportError as e:
+            logger.warning("Required package not installed for Redis", error=str(e))
             self.config.enabled = False
             return False
         except Exception as e:

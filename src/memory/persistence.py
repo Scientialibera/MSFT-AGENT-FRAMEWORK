@@ -66,27 +66,33 @@ class ADLSPersistence:
         self._initialized = True
         
         try:
-            from azure.storage.filedatalake.aio import DataLakeServiceClient
+            # Try blob storage API first (works with any storage account)
+            # ADLS Gen2 DFS API requires hierarchical namespace which may not be enabled
+            from azure.storage.blob.aio import BlobServiceClient
             from azure.identity.aio import DefaultAzureCredential
             
             credential = DefaultAzureCredential()
             
-            account_url = f"https://{self.config.account_name}.dfs.core.windows.net"
-            self._client = DataLakeServiceClient(
+            # Use blob endpoint instead of DFS
+            account_url = f"https://{self.config.account_name}.blob.core.windows.net"
+            self._client = BlobServiceClient(
                 account_url=account_url,
                 credential=credential
             )
             
-            self._container_client = self._client.get_file_system_client(
+            self._container_client = self._client.get_container_client(
                 self.config.container
             )
             
-            # Check if container exists, create if not
+            # Check if container exists
             try:
-                await self._container_client.get_file_system_properties()
+                await self._container_client.get_container_properties()
             except Exception:
-                logger.info("Creating ADLS container", container=self.config.container)
-                await self._container_client.create_file_system()
+                logger.info("Creating container", container=self.config.container)
+                await self._container_client.create_container()
+            
+            # Store flag for API type
+            self._using_blob_api = True
             
             logger.info(
                 "ADLS persistence connected",
@@ -96,7 +102,7 @@ class ADLSPersistence:
             return True
             
         except ImportError:
-            logger.warning("azure-storage-file-datalake not installed, persistence disabled")
+            logger.warning("azure-storage-blob not installed, persistence disabled")
             self.config.enabled = False
             return False
         except Exception as e:
@@ -123,9 +129,9 @@ class ADLSPersistence:
         
         try:
             path = self._make_path(chat_id)
-            file_client = self._container_client.get_file_client(path)
+            blob_client = self._container_client.get_blob_client(path)
             
-            download = await file_client.download_file()
+            download = await blob_client.download_blob()
             content = await download.readall()
             data = json.loads(content.decode('utf-8'))
             
@@ -162,7 +168,7 @@ class ADLSPersistence:
         
         try:
             path = self._make_path(chat_id)
-            file_client = self._container_client.get_file_client(path)
+            blob_client = self._container_client.get_blob_client(path)
             
             # Add timestamp to data
             thread_data["_persisted_at"] = datetime.now(timezone.utc).isoformat()
@@ -170,8 +176,8 @@ class ADLSPersistence:
             
             content = json.dumps(thread_data, indent=2, default=str)
             
-            # Create/overwrite file
-            await file_client.upload_data(
+            # Create/overwrite blob
+            await blob_client.upload_blob(
                 content.encode('utf-8'),
                 overwrite=True,
                 metadata=metadata
@@ -191,8 +197,8 @@ class ADLSPersistence:
         
         try:
             path = self._make_path(chat_id)
-            file_client = self._container_client.get_file_client(path)
-            await file_client.delete_file()
+            blob_client = self._container_client.get_blob_client(path)
+            await blob_client.delete_blob()
             logger.debug("ADLS delete success", chat_id=chat_id)
             return True
         except Exception as e:
@@ -206,8 +212,8 @@ class ADLSPersistence:
         
         try:
             path = self._make_path(chat_id)
-            file_client = self._container_client.get_file_client(path)
-            await file_client.get_file_properties()
+            blob_client = self._container_client.get_blob_client(path)
+            await blob_client.get_blob_properties()
             return True
         except Exception:
             return False

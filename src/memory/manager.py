@@ -167,7 +167,15 @@ class ChatHistoryManager:
     ) -> tuple[str, Any]:
         """Restore a session from serialized data."""
         try:
-            thread = await self._agent.deserialize_thread(thread_data)
+            # Make a copy and strip metadata fields before deserializing
+            # The framework's deserialize_thread() doesn't expect our metadata fields
+            clean_data = dict(thread_data)
+            keys_to_strip = [k for k in clean_data.keys() if k.startswith('_')]
+            for key in keys_to_strip:
+                del clean_data[key]
+            
+            logger.debug("Deserializing thread", chat_id=chat_id, keys=list(clean_data.keys()))
+            thread = await self._agent.deserialize_thread(clean_data)
             
             session = ChatSession(
                 chat_id=chat_id,
