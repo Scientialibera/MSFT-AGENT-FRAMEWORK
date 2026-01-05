@@ -338,6 +338,7 @@ name = "realtime"
 type = "websocket"
 enabled = true
 url = "wss://api.example.com/mcp"
+headers = { Authorization = "Bearer your-token" }
 ```
 
 ### MCP Types
