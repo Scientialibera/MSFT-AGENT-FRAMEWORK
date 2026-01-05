@@ -66,6 +66,11 @@ class AgentConfig:
         from src.orchestrator.workflow_loader import parse_workflow_configs
         self.workflow_configs = parse_workflow_configs(self._config)
         
+        # Memory settings (cache + persistence)
+        from src.memory.manager import parse_memory_config
+        self.memory_config = parse_memory_config(self._config)
+
+        
     def _get(self, key: str, default: Any = None) -> Any:
         """Get configuration value with default."""
         return self._config.get(key, default)

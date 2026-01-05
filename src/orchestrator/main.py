@@ -68,6 +68,7 @@ from src.orchestrator.loader import load_and_register_tools
 from src.orchestrator.middleware import function_call_middleware
 from src.orchestrator.mcp_loader import MCPManager
 from src.orchestrator.workflow_loader import WorkflowManager
+from src.memory import ChatHistoryManager
 
 logger = structlog.get_logger(__name__)
 
@@ -131,6 +132,9 @@ class AIAssistant:
         # Workflow manager for multi-agent pipelines
         self._workflow_manager: Optional[WorkflowManager] = None
         
+        # Chat history manager (cache + persistence)
+        self._history_manager: Optional[ChatHistoryManager] = None
+        
         # Initialize Azure OpenAI client
         self.chat_client = AzureOpenAIChatClient(
             endpoint=self.config.azure_openai_endpoint,
@@ -191,6 +195,13 @@ class AIAssistant:
             middleware=[function_call_middleware],
         )
         
+        # Initialize chat history manager
+        self._history_manager = ChatHistoryManager(self.config.memory_config)
+        self._history_manager.set_agent(self.agent)
+        
+        # Start background persist if configured
+        await self._history_manager.start_background_persist()
+        
         self._mcp_initialized = True
         workflow_count = len(self._workflow_manager.workflows) if self._workflow_manager else 0
         logger.info(
@@ -245,7 +256,11 @@ class AIAssistant:
         )
         logger.info("Tools loaded via dynamic loader", count=tools_loaded)
 
-    async def process_question(self, question: str) -> Dict[str, Any]:
+    async def process_question(
+        self, 
+        question: str,
+        chat_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Process a question using the Agent Framework.
 
@@ -258,34 +273,48 @@ class AIAssistant:
 
         Args:
             question: User's question to process
+            chat_id: Optional session ID for conversation continuity.
+                    If provided and found in cache/ADLS, continues that session.
+                    If provided but not found, creates new session with that ID.
+                    If not provided, generates new UUID for the session.
 
         Returns:
             Dictionary containing:
                 - question: Original question
                 - response: Agent's response text
                 - success: Whether processing succeeded
+                - chat_id: Session ID (for continuity in future calls)
         """
         # Auto-initialize if needed (for simple usage without MCP)
         if self.agent is None:
             await self.initialize()
         
-        logger.info("Processing question", question=question[:100])
+        logger.info("Processing question", question=question[:100], chat_id=chat_id)
 
         try:
-            result = await self.agent.run(question)
+            # Get or create thread for this session
+            chat_id, thread = await self._history_manager.get_or_create_thread(chat_id)
             
-            logger.info("Processing completed successfully")
+            # Run agent with thread for context
+            result = await self.agent.run(question, thread=thread)
+            
+            # Save thread state
+            await self._history_manager.save_thread(chat_id, thread)
+            
+            logger.info("Processing completed successfully", chat_id=chat_id)
             return {
                 "question": question,
                 "response": result.text,
                 "success": True,
+                "chat_id": chat_id,
             }
         except Exception as e:
-            logger.error("Processing failed", error=str(e))
+            logger.error("Processing failed", error=str(e), chat_id=chat_id)
             return {
                 "question": question,
                 "response": f"Error: {str(e)}",
                 "success": False,
+                "chat_id": chat_id,
             }
 
     async def run_workflow(
@@ -393,8 +422,45 @@ class AIAssistant:
             return []
         return self._workflow_manager.workflow_names
 
+    async def list_chats(
+        self, 
+        source: str = "all",
+        limit: int = 100
+    ) -> list:
+        """
+        List available chat sessions.
+        
+        Args:
+            source: "cache", "persistence", or "all"
+            limit: Maximum number of results
+            
+        Returns:
+            List of chat metadata dicts
+        """
+        if not self._history_manager:
+            return []
+        return await self._history_manager.list_chats(source=source, limit=limit)
+    
+    async def delete_chat(self, chat_id: str) -> bool:
+        """
+        Delete a chat session from all storage layers.
+        
+        Args:
+            chat_id: The session ID to delete
+            
+        Returns:
+            True if deleted successfully
+        """
+        if not self._history_manager:
+            return False
+        return await self._history_manager.delete_chat(chat_id)
+
     async def close(self) -> None:
         """Close resources and cleanup."""
+        # Close chat history manager (persists active sessions)
+        if self._history_manager:
+            await self._history_manager.close()
+        
         # Close MCP connections
         if self._mcp_manager:
             await self._mcp_manager.close()
@@ -420,13 +486,14 @@ class AIAssistant:
 _assistant_instance = None
 
 
-async def process_query(question: str) -> str:
+async def process_query(question: str, chat_id: Optional[str] = None) -> str:
     """
     Simple helper function to process a query using the AI Assistant.
     Creates a singleton instance for efficiency.
     
     Args:
         question: User's question to process
+        chat_id: Optional session ID for conversation continuity
         
     Returns:
         str: Agent's response text
@@ -437,7 +504,7 @@ async def process_query(question: str) -> str:
         _assistant_instance = await AIAssistant.create()
         logger.info("Created new AI Assistant instance")
     
-    result = await _assistant_instance.process_question(question)
+    result = await _assistant_instance.process_question(question, chat_id=chat_id)
     return result["response"]
 
 

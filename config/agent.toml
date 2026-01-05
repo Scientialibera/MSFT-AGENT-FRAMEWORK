@@ -142,3 +142,57 @@ config_dir = "config/tools"
 # [[agent.workflows.edges]]
 # from = "TechSupport"
 # to = "Manager"
+
+# ==============================================================================
+# MEMORY CONFIGURATION (Chat History Caching & Persistence)
+# Manages session state across conversations with Redis cache and ADLS persistence
+# ==============================================================================
+
+# Enable memory management (required for chat_id session support)
+# [agent.memory]
+# enabled = true
+
+# ------------------------------------------------------------------------------
+# Cache Configuration (Azure Cache for Redis)
+# Uses DefaultAzureCredential - no API keys required
+# ------------------------------------------------------------------------------
+# [agent.memory.cache]
+# enabled = true
+# 
+# # Azure Cache for Redis hostname (without https://)
+# host = "your-redis.redis.cache.windows.net"
+# 
+# # Port (6380 for SSL, 6379 for non-SSL)
+# port = 6380
+# 
+# # Use SSL (required for Azure Cache for Redis)
+# ssl = true
+# 
+# # TTL in seconds (how long chats stay in cache)
+# ttl = 3600  # 1 hour
+# 
+# # Key prefix for chat sessions
+# prefix = "chat:"
+# 
+# # Redis database number
+# database = 0
+
+# ------------------------------------------------------------------------------
+# Persistence Configuration (Azure Data Lake Storage Gen2)
+# Long-term storage for chat history. Uses DefaultAzureCredential.
+# ------------------------------------------------------------------------------
+# [agent.memory.persistence]
+# enabled = true
+# 
+# # ADLS Gen2 storage account name
+# account_name = "yourstorageaccount"
+# 
+# # Container for chat history
+# container = "chat-history"
+# 
+# # Folder within container
+# folder = "threads"
+# 
+# # When to persist: "ttl+SECONDS" = SECONDS before cache TTL expires
+# # Example: ttl+300 means persist 5 minutes before cache expires
+# schedule = "ttl+300"

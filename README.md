@@ -69,6 +69,7 @@ graph TB
 - **Dynamic Tool Loading** — Drop JSON configs in `config/tools/` and matching services in `src/` for auto-discovery
 - **MCP Support** — Connect to external MCP servers (stdio, HTTP, WebSocket) for extended capabilities
 - **Multi-Agent Workflows** — Define sequential or custom agent pipelines for complex orchestration
+- **Session Management** — Multi-turn conversations with Redis cache and ADLS persistence
 - **TOML Configuration** — Professional configuration via `config/agent.toml` or `pyproject.toml`
 - **Azure OpenAI Integration** — Built-in support for Azure OpenAI with DefaultAzureCredential
 - **Agentic Reasoning** — Multi-step reasoning with automatic tool chaining
@@ -475,6 +476,70 @@ async with AIAssistant() as assistant:
 |------|-------------|----------|
 | `sequential` | Agents execute in defined order | Content pipelines, review chains |
 | `custom` | User-defined graph with edges | Conditional routing, complex flows |
+
+## Session Management
+
+The framework supports multi-turn conversations with optional Redis caching and ADLS persistence.
+
+### Basic Usage with Sessions
+
+```python
+async with AIAssistant() as assistant:
+    # First message - new session (auto-generated chat_id)
+    result1 = await assistant.process_question("Hello, my name is Alice")
+    chat_id = result1["chat_id"]  # Save this for continuity
+    
+    # Continue the same session
+    result2 = await assistant.process_question(
+        "What's my name?",
+        chat_id=chat_id
+    )
+    # Response: "Your name is Alice"
+    
+    # List all sessions
+    chats = await assistant.list_chats()
+    
+    # Delete a session
+    await assistant.delete_chat(chat_id)
+```
+
+### Session Configuration
+
+Configure caching and persistence in `config/agent.toml`:
+
+```toml
+# Redis Cache (Azure Cache for Redis with AAD auth)
+[agent.memory.cache]
+enabled = true
+host = "your-redis.redis.cache.windows.net"
+port = 6380
+ssl = true
+ttl = 3600  # 1 hour
+prefix = "chat:"
+
+# ADLS Persistence (Azure Data Lake Storage Gen2)
+[agent.memory.persistence]
+enabled = true
+account_name = "yourstorageaccount"
+container = "chat-history"
+folder = "threads"
+schedule = "ttl+300"  # Persist 5 min before cache TTL expires
+```
+
+### Session Flow
+
+| Scenario | Behavior |
+|----------|----------|
+| No `chat_id` provided | Generate new UUID, create new thread |
+| `chat_id` in cache | Restore from Redis |
+| `chat_id` not in cache, in ADLS | Load from ADLS, cache it |
+| `chat_id` not found anywhere | Create new thread with provided ID |
+
+### Authentication
+
+All Azure services use `DefaultAzureCredential` - no API keys required:
+- **Redis**: Uses AAD token authentication
+- **ADLS**: Uses managed identity or logged-in Azure CLI user
 
 ## System Prompt
 

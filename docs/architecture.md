@@ -14,12 +14,18 @@ graph TB
         O[Orchestrator<br/>main.py]
         C[Config Loader<br/>config.py]
         M[Middleware<br/>middleware.py]
+        H[History Manager<br/>manager.py]
     end
     
     subgraph "Tool Sources"
         L[Local Tools<br/>loader.py]
         MCP[MCP Manager<br/>mcp_loader.py]
         W[Workflow Manager<br/>workflow_loader.py]
+    end
+    
+    subgraph "Memory Layer"
+        RC[Redis Cache<br/>cache.py]
+        AP[ADLS Persistence<br/>persistence.py]
     end
     
     subgraph "Local Tools"
@@ -40,14 +46,17 @@ graph TB
     end
     
     subgraph "Azure OpenAI"
-        AO[ChatAgent<br/>gpt-4o / gpt-4o]
+        AO[ChatAgent<br/>gpt-4o]
     end
     
     U --> O
     O --> C
     O --> M
+    O --> H
     O --> L
     O --> MCP
+    H --> RC
+    H --> AP
     O --> W
     L --> T1
     L --> T2
@@ -264,7 +273,63 @@ graph TB
 | **ToolLoader** | `loader.py` | Dynamic tool discovery, service instantiation |
 | **MCPManager** | `mcp_loader.py` | MCP server connections (stdio/http/ws) |
 | **WorkflowManager** | `workflow_loader.py` | Multi-agent workflow creation and execution |
+| **ChatHistoryManager** | `memory/manager.py` | Session management, cache + persistence orchestration |
+| **RedisCache** | `memory/cache.py` | Azure Cache for Redis with AAD auth |
+| **ADLSPersistence** | `memory/persistence.py` | ADLS Gen2 for long-term chat storage |
 | **Middleware** | `middleware.py` | Request/response interception, logging |
+
+## Chat History & Session Management
+
+The framework supports multi-turn conversations with session persistence.
+
+```mermaid
+flowchart TB
+    subgraph "Request"
+        Q[Question + chat_id?]
+    end
+    
+    subgraph "ChatHistoryManager"
+        CHK{chat_id provided?}
+        CACHE[Check Redis Cache]
+        ADLS[Check ADLS]
+        NEW[Create New Thread]
+        RESTORE[Restore Thread]
+    end
+    
+    subgraph "Storage"
+        RC[(Redis Cache)]
+        AP[(ADLS Gen2)]
+    end
+    
+    Q --> CHK
+    CHK -->|No| NEW
+    CHK -->|Yes| CACHE
+    CACHE -->|Hit| RESTORE
+    CACHE -->|Miss| ADLS
+    ADLS -->|Found| RESTORE
+    ADLS -->|Not Found| NEW
+    
+    RESTORE --> RC
+    NEW --> RC
+    RC -.->|TTL expiring| AP
+```
+
+### Session Flow Edge Cases
+
+| chat_id | Cache | ADLS | Action |
+|---------|-------|------|--------|
+| None | - | - | Generate new UUID, create thread |
+| Provided | Hit | - | Restore from cache |
+| Provided | Miss | Found | Load from ADLS → cache |
+| Provided | Miss | Not Found | Create new with provided ID |
+
+### Merge Logic
+
+When persisting to ADLS, the manager:
+1. Loads existing ADLS data (if any)
+2. Merges with cache data (new messages win)
+3. Preserves original `_created_at` timestamp
+4. Increments `_merge_count` for auditing
 
 ## Data Flow Summary
 
