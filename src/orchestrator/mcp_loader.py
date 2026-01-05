@@ -61,6 +61,7 @@ class MCPManager:
                 
                 For websocket type:
                 - url: WebSocket URL (wss://...)
+                - headers: Optional headers dict (for auth, etc.)
                 
         Returns:
             List of initialized MCP tool instances
@@ -160,6 +161,7 @@ class MCPManager:
         mcp_tool = MCPWebsocketTool(
             name=config.get("name", "websocket-mcp"),
             url=url,
+            headers=config.get("headers", {}),
         )
         
         initialized_tool = await self._exit_stack.enter_async_context(mcp_tool)

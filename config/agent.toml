@@ -84,6 +84,8 @@ config_dir = "config/tools"
 # type = "websocket"
 # enabled = true
 # url = "wss://api.example.com/mcp"
+# # Optional: authentication headers
+# # headers = { Authorization = "Bearer your-token" }
 
 # ==============================================================================
 # WORKFLOW CONFIGURATION (Multi-Agent Pipelines)
