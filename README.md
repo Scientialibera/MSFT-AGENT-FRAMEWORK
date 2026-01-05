@@ -145,11 +145,16 @@ MSFT-AGENT-FRAMEWORK/
 │   │   ├── mcp_loader.py      # MCP server manager
 │   │   ├── workflow_loader.py # Workflow manager
 │   │   └── middleware.py      # Request/response middleware
+│   ├── memory/                 # Session management
+│   │   ├── cache.py           # Redis cache (Azure AAD auth)
+│   │   ├── persistence.py     # ADLS Gen2 storage
+│   │   └── manager.py         # ChatHistoryManager
 │   └── example_tool/           # Example tool implementation
 │       ├── __init__.py
 │       └── service.py
 ├── tests/
-│   └── test_integration.py
+│   ├── test_agent.py          # Core agent tests
+│   └── test_memory.py         # Session management tests
 ├── deployment/
 │   └── Dockerfile
 ├── docs/

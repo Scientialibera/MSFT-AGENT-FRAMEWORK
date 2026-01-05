@@ -333,11 +333,14 @@ When persisting to ADLS, the manager:
 
 ## Data Flow Summary
 
-1. **User Query** → AIAssistant receives question
-2. **Configuration** → Load TOML, environment vars
-3. **Tool Loading** → Discover and instantiate all tools
-4. **MCP Loading** → Connect to external MCP servers
-5. **Workflow Loading** → Build multi-agent pipelines
-6. **Agent Creation** → Initialize ChatAgent with tools
-7. **Processing** → LLM reasons and calls tools as needed
-8. **Response** → Final answer returned to user
+1. **User Query** → AIAssistant receives question + optional `chat_id`
+2. **Session Lookup** → ChatHistoryManager checks cache → ADLS → creates new
+3. **Configuration** → Load TOML, environment vars
+4. **Tool Loading** → Discover and instantiate all tools
+5. **MCP Loading** → Connect to external MCP servers
+6. **Workflow Loading** → Build multi-agent pipelines
+7. **Agent Creation** → Initialize ChatAgent with tools
+8. **Processing** → LLM reasons and calls tools as needed
+9. **Session Save** → Update cache, persist to ADLS before TTL
+10. **Response** → Final answer + `chat_id` returned to user
+
