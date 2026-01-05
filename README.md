@@ -276,6 +276,23 @@ config_dir = "config/tools"
 [agent.tools.my_tool]
 api_key = "secret"
 timeout = 30
+
+# Redis Cache (Azure Cache for Redis with AAD auth)
+[agent.memory.cache]
+enabled = true
+host = "your-redis.redis.cache.windows.net"
+port = 6380
+ssl = true
+ttl = 3600  # 1 hour
+prefix = "chat:"
+
+# ADLS Persistence (Azure Data Lake Storage Gen2)
+[agent.memory.persistence]
+enabled = true
+account_name = "yourstorageaccount"
+container = "chat-history"
+folder = "threads"
+schedule = "ttl+300"  # Persist 5 min before cache TTL expires
 ```
 
 ### Environment Variable Overrides
