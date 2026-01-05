@@ -9,13 +9,19 @@ Build intelligent AI assistants that can reason, chain tool calls, orchestrate m
 ```mermaid
 graph TB
     subgraph "User Interface"
-        U[User Query]
+        U[User Query + chat_id?]
     end
     
     subgraph "AIAssistant"
         O[Orchestrator<br/>main.py]
         C[Config Loader<br/>config.py]
         M[Middleware<br/>middleware.py]
+        H[History Manager<br/>manager.py]
+    end
+    
+    subgraph "Memory Layer"
+        RC[(Redis Cache<br/>Azure Cache for Redis)]
+        AP[(ADLS Persistence<br/>Data Lake Gen2)]
     end
     
     subgraph "Tool Sources"
@@ -42,12 +48,16 @@ graph TB
     end
     
     subgraph "Azure OpenAI"
-        AO[ChatAgent<br/>gpt-4o / gpt-4o]
+        AO[ChatAgent<br/>gpt-4o]
     end
     
     U --> O
     O --> C
     O --> M
+    O --> H
+    H --> RC
+    RC -.->|TTL expiring| AP
+    H --> AP
     O --> L
     O --> MCP
     O --> W
