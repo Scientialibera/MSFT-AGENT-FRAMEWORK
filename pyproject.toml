@@ -30,6 +30,9 @@ dependencies = [
     "anyio>=4.0.0",
     "typing-extensions>=4.0.0",
     "tomli>=2.0.0;python_version<'3.11'",
+    # Memory module dependencies (session management)
+    "redis[hiredis]>=5.0.0",
+    "azure-storage-file-datalake>=12.14.0",
 ]
 
 [project.optional-dependencies]
