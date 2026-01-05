@@ -59,11 +59,11 @@ class AgentConfig:
         }
         
         # MCP settings
-        from src.orchestrator.mcp_loader import parse_mcp_configs
+        from src.loaders.mcp import parse_mcp_configs
         self.mcp_configs = parse_mcp_configs(self._config)
         
         # Workflow settings
-        from src.orchestrator.workflow_loader import parse_workflow_configs
+        from src.loaders.workflows import parse_workflow_configs
         self.workflow_configs = parse_workflow_configs(self._config)
         
         # Memory settings (cache + persistence)

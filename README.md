@@ -13,10 +13,10 @@ graph TB
     end
     
     subgraph "AIAssistant"
-        O[Orchestrator<br/>main.py]
-        C[Config Loader<br/>config.py]
-        M[Middleware<br/>middleware.py]
-        H[History Manager<br/>manager.py]
+        O[Agent<br/>assistant.py]
+        C[Config Loader<br/>config/loader.py]
+        M[Middleware<br/>agent/middleware.py]
+        H[History Manager<br/>memory/manager.py]
     end
     
     subgraph "Memory Layer"
@@ -24,10 +24,10 @@ graph TB
         AP[(ADLS Persistence<br/>Data Lake Gen2)]
     end
     
-    subgraph "Tool Sources"
-        L[Local Tools<br/>loader.py]
-        MCP[MCP Manager<br/>mcp_loader.py]
-        W[Workflow Manager<br/>workflow_loader.py]
+    subgraph "Loaders"
+        L[Tool Loader<br/>loaders/tools.py]
+        MCP[MCP Manager<br/>loaders/mcp.py]
+        W[Workflow Manager<br/>loaders/workflows.py]
     end
     
     subgraph "Local Tools"
@@ -138,13 +138,15 @@ MSFT-AGENT-FRAMEWORK/
 │   └── tools/                  # Tool JSON definitions
 │       └── example_tool.json
 ├── src/
-│   ├── orchestrator/           # Core agent framework
-│   │   ├── main.py            # AIAssistant class
-│   │   ├── config.py          # TOML config loader
-│   │   ├── loader.py          # Dynamic tool loader
-│   │   ├── mcp_loader.py      # MCP server manager
-│   │   ├── workflow_loader.py # Workflow manager
+│   ├── agent/                  # Core agent module
+│   │   ├── assistant.py       # AIAssistant class
 │   │   └── middleware.py      # Request/response middleware
+│   ├── config/                 # Configuration loading
+│   │   └── loader.py          # TOML config loader
+│   ├── loaders/                # Dynamic loaders
+│   │   ├── tools.py           # Tool loader (JSON + services)
+│   │   ├── mcp.py             # MCP server manager
+│   │   └── workflows.py       # Workflow manager
 │   ├── memory/                 # Session management
 │   │   ├── cache.py           # Redis cache (Azure AAD auth)
 │   │   ├── persistence.py     # ADLS Gen2 storage

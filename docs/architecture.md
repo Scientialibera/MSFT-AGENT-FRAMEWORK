@@ -11,21 +11,21 @@ graph TB
     end
     
     subgraph "AIAssistant"
-        O[Orchestrator<br/>main.py]
-        C[Config Loader<br/>config.py]
-        M[Middleware<br/>middleware.py]
-        H[History Manager<br/>manager.py]
+        O[Agent<br/>agent/assistant.py]
+        C[Config Loader<br/>config/loader.py]
+        M[Middleware<br/>agent/middleware.py]
+        H[History Manager<br/>memory/manager.py]
     end
     
-    subgraph "Tool Sources"
-        L[Local Tools<br/>loader.py]
-        MCP[MCP Manager<br/>mcp_loader.py]
-        W[Workflow Manager<br/>workflow_loader.py]
+    subgraph "Loaders"
+        L[Tool Loader<br/>loaders/tools.py]
+        MCP[MCP Manager<br/>loaders/mcp.py]
+        W[Workflow Manager<br/>loaders/workflows.py]
     end
     
     subgraph "Memory Layer"
-        RC[Redis Cache<br/>cache.py]
-        AP[ADLS Persistence<br/>persistence.py]
+        RC[Redis Cache<br/>memory/cache.py]
+        AP[ADLS Persistence<br/>memory/persistence.py]
     end
     
     subgraph "Local Tools"
@@ -268,15 +268,15 @@ graph TB
 
 | Component | File | Responsibility |
 |-----------|------|----------------|
-| **AIAssistant** | `main.py` | Main orchestrator, question processing, lifecycle management |
-| **AgentConfig** | `config.py` | TOML loading, validation, environment overrides |
-| **ToolLoader** | `loader.py` | Dynamic tool discovery, service instantiation |
-| **MCPManager** | `mcp_loader.py` | MCP server connections (stdio/http/ws) |
-| **WorkflowManager** | `workflow_loader.py` | Multi-agent workflow creation and execution |
+| **AIAssistant** | `agent/assistant.py` | Main orchestrator, question processing, lifecycle management |
+| **AgentConfig** | `config/loader.py` | TOML loading, validation, environment overrides |
+| **ToolLoader** | `loaders/tools.py` | Dynamic tool discovery, service instantiation |
+| **MCPManager** | `loaders/mcp.py` | MCP server connections (stdio/http/ws) |
+| **WorkflowManager** | `loaders/workflows.py` | Multi-agent workflow creation and execution |
 | **ChatHistoryManager** | `memory/manager.py` | Session management, cache + persistence orchestration |
 | **RedisCache** | `memory/cache.py` | Azure Cache for Redis with AAD auth |
 | **ADLSPersistence** | `memory/persistence.py` | ADLS Gen2 for long-term chat storage |
-| **Middleware** | `middleware.py` | Request/response interception, logging |
+| **Middleware** | `agent/middleware.py` | Request/response interception, logging |
 
 ## Chat History & Session Management
 

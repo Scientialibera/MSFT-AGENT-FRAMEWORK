@@ -62,14 +62,14 @@ class TestToolLoader:
     
     def test_load_tool_configs(self):
         """Test loading tool configs from directory."""
-        from src.orchestrator.loader import load_tool_configs
+        from src.loaders import load_tool_configs
         
         configs = load_tool_configs("config/tools")
         assert "example_tool" in configs
     
     def test_service_name_to_class_name(self):
         """Test service name conversion."""
-        from src.orchestrator.loader import service_name_to_class_name
+        from src.loaders.tools import service_name_to_class_name
         
         assert service_name_to_class_name("example_tool") == "ExampleToolService"
         assert service_name_to_class_name("weather") == "WeatherService"
@@ -81,7 +81,7 @@ class TestConfig:
     
     def test_load_config_from_toml(self):
         """Test loading config from agent.toml."""
-        from src.orchestrator.config import load_config
+        from src.config import load_config
         
         # This will load from config/agent.toml
         config = load_config("config/agent.toml")
@@ -92,7 +92,7 @@ class TestConfig:
     def test_env_override(self):
         """Test that environment variables override config."""
         import os
-        from src.orchestrator.config import AgentConfig
+        from src.config import AgentConfig
         
         # Set env var
         os.environ["AZURE_OPENAI_ENDPOINT"] = "https://test.openai.azure.com/"
